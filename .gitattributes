@@ -1,0 +1,8 @@
+# Normalize line endings. The archive is maintained from Windows but the
+# pipeline runs anywhere, and notes are compared and diffed constantly; mixed
+# endings would make every diff unreadable.
+* text=auto eol=lf
+
+# Notes and docs are prose. Diffing them by word rather than by line makes
+# review of a small correction readable.
+*.md diff=markdown

@@ -1,0 +1,28 @@
+# Transcripts are the publisher's copyrighted content, not ours to republish.
+# They are not committed. They regenerate in minutes from the publisher's own
+# site, which also keeps the scraper honest: if it breaks, a fetch reveals it.
+#
+#     python run.py fetch catalyst
+#
+# Everything derived from them -- the notes, the manifest, the synthesis -- is
+# original work and IS committed.
+podcasts/*/episodes/*/transcript.md
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+
+# Scratch
+*.log
+tmp/
+scratch/

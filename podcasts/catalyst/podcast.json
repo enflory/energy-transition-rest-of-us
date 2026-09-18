@@ -1,0 +1,39 @@
+{
+  "name": "catalyst",
+  "display_name": "Catalyst with Shayle Kann",
+  "publisher": "Latitude Media",
+  "host": "Shayle Kann",
+
+  "sitemaps": [
+    "https://www.latitudemedia.com/post-sitemap.xml",
+    "https://www.latitudemedia.com/post-sitemap2.xml"
+  ],
+  "url_filter": "/catalyst-",
+  "delay_seconds": 1.0,
+
+  "_comment_corrections": "Published transcripts render the host's name phonetically. Each entry is applied to the whole document and tallied in the transcript's frontmatter, so every change is visible.",
+  "corrections": [
+    {
+      "pattern": "\\bSh(?:ay|a)le\\s+(?:Khan|Kahn|Cann|Can)\\b",
+      "replacement": "Shayle Kann",
+      "note": "host name as published (Shayle Khan) corrected to Shayle Kann"
+    }
+  ],
+
+  "_comment_non_speakers": "Labels that match the speaker-label shape but are not people. 'tag' is the show's intro bumper and appeared in 48 episodes before it was caught.",
+  "non_speakers": [
+    "credits", "note", "notes", "correction", "update", "transcript",
+    "editor", "disclosure", "listen", "watch", "read", "subscribe", "tag"
+  ],
+
+  "_comment_boilerplate": "Sponsor reads, credits and the footer bio. These are filtered BEFORE the transcript start is located, because a line like 'Credits:' otherwise matches the speaker-label regex and drags sponsor copy into the dialogue.",
+  "boilerplate": [
+    "^Catalyst is brought to you by",
+    "^This episode of Catalyst is brought to you by",
+    "^Credits:",
+    "^Copied to clipboard",
+    "Summit \\d{4} is open for registration",
+    "^Sh(?:ay|a)le\\s+(?:Kann|Khan|Kahn|Cann)\\s+is a partner at Energy Impact Partners",
+    "^/+$"
+  ]
+}

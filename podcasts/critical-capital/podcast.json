@@ -1,0 +1,32 @@
+{
+  "name": "critical-capital",
+  "display_name": "Critical Capital",
+  "publisher": "Latitude Media",
+  "host": "TODO: fill in after reading the first transcript",
+
+  "sitemaps": [
+    "https://www.latitudemedia.com/post-sitemap.xml",
+    "https://www.latitudemedia.com/post-sitemap2.xml"
+  ],
+  "url_filter": "/critical-capital-",
+  "delay_seconds": 1.0,
+
+  "_comment_status": "Scaffold. The url_filter is verified against the live sitemap (2 episodes as of 2026-09-18); everything below is empty until a first scrape shows what this show actually needs. Run: make fetch PODCAST=critical-capital",
+
+  "_comment_corrections": "Leave empty until a real, repeated publisher misspelling is observed. Do not add speculative corrections; each one edits the source text.",
+  "corrections": [],
+
+  "_comment_non_speakers": "Start with the generic set. Add show-specific bumper labels only after seeing them in a transcript.",
+  "non_speakers": [
+    "credits", "note", "notes", "correction", "update", "transcript",
+    "editor", "disclosure", "listen", "watch", "read", "subscribe"
+  ],
+
+  "_comment_boilerplate": "Latitude's shared furniture is listed first. Show-specific sponsor reads get added after the first scrape, when you can see what actually appears.",
+  "boilerplate": [
+    "^Credits:",
+    "^Copied to clipboard",
+    "Summit \\d{4} is open for registration",
+    "^/+$"
+  ]
+}
