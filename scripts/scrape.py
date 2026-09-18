@@ -8,9 +8,15 @@ Usage:
     python scripts/scrape.py <podcast> --all --force  # re-fetch existing too
 
   <podcast> is a directory name under podcasts/, e.g. "catalyst".
-  Its podcast.json supplies the sitemaps, the URL filter, the known
-  publisher misspellings to correct, and the boilerplate to strip. Nothing
-  show-specific lives in this file.
+  Its podcast.json supplies where the episodes are listed, how the page
+  stores its title and date, which region of the page holds the content,
+  the known publisher misspellings to correct, and the boilerplate to
+  strip. Nothing show-specific lives in this file.
+
+A show is not always published by the podcast's own network. Critical
+Capital is a Latitude Media show whose transcripts are published by Crux,
+its co-producer, on an entirely different CMS. Both are read by this one
+script because every difference between them is a line of configuration.
 
 Writes to:
     podcasts/<podcast>/episodes/<YYYY-MM-DD>-<slug>/transcript.md
@@ -33,6 +39,7 @@ import os
 import re
 import sys
 import time
+import urllib.parse
 import urllib.request
 from datetime import datetime
 
@@ -49,12 +56,24 @@ CORRECTIONS = []
 BOILERPLATE = []
 NON_SPEAKERS = set()
 DELAY_SECONDS = 1.0
+TITLE_SUFFIX = None
+PUBLISHED = []
+CONTENT_START = None
+CONTENT_END = None
+
+# The publisher's own default: an ISO timestamp in a WordPress meta tag. Shows
+# hosted elsewhere override this with "published" in podcast.json.
+DEFAULT_PUBLISHED = [{
+    "pattern": r'<meta property="article:published_time" content="([^"]+)"',
+    "format": "iso",
+}]
 
 
 def load_config(podcast):
     """Read podcasts/<podcast>/podcast.json and populate module state."""
     global CFG, OUT_ROOT, MANIFEST, SITEMAPS, CORRECTIONS, BOILERPLATE
-    global NON_SPEAKERS, DELAY_SECONDS
+    global NON_SPEAKERS, DELAY_SECONDS, TITLE_SUFFIX, PUBLISHED
+    global CONTENT_START, CONTENT_END
     path = os.path.join(PODCASTS, podcast, "podcast.json")
     if not os.path.isfile(path):
         sys.exit("no config at %s (see docs/ADDING-A-PODCAST.md)" % path)
@@ -68,6 +87,14 @@ def load_config(podcast):
     CORRECTIONS = [(re.compile(c["pattern"]), c["replacement"], c["note"])
                    for c in CFG.get("corrections", [])]
     BOILERPLATE = [re.compile(p, re.I) for p in CFG.get("boilerplate", [])]
+    TITLE_SUFFIX = (re.compile(CFG["title_suffix"])
+                    if CFG.get("title_suffix") else None)
+    PUBLISHED = [(re.compile(p["pattern"], re.S), p.get("format", "iso"))
+                 for p in (CFG.get("published") or DEFAULT_PUBLISHED)]
+    CONTENT_START = (re.compile(CFG["content_start"], re.S)
+                     if CFG.get("content_start") else None)
+    CONTENT_END = (re.compile(CFG["content_end"], re.S)
+                   if CFG.get("content_end") else None)
     return CFG
 
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -77,6 +104,11 @@ UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
 # This shape is shared across shows; everything else show-specific is in
 # podcast.json.
 SPEAKER_RE = re.compile(r"^([A-Z][A-Za-z.\-']*(?: [A-Z][A-Za-z.\-']*){0,3}):\s")
+
+# Zero-width characters. Some CMSes emit these ahead of a speaker label, which
+# makes the paragraph invisibly fail SPEAKER_RE and drop out of the dialogue.
+# They carry no meaning, so removing them is normalization, not editing.
+ZERO_WIDTH_RE = re.compile("[​‌‍⁠﻿]")
 
 
 def fetch(url):
@@ -91,6 +123,7 @@ def clean(fragment):
     fragment = re.sub(r"<[^>]+>", "", fragment)
     fragment = html.unescape(fragment)
     fragment = fragment.replace(" ", " ")
+    fragment = ZERO_WIDTH_RE.sub("", fragment)
     fragment = re.sub(r"[ \t]+", " ", fragment)
     return fragment.strip()
 
@@ -132,32 +165,117 @@ def topic_bullets(page):
     return [i for i in items if i]
 
 
-def episode_urls():
-    """Every episode URL for this show listed in the publisher sitemaps."""
+def sitemap_urls():
+    """Episode URLs for this show listed in the publisher sitemaps."""
     found = []
+    needle = CFG.get("url_filter", "")
     for sm in SITEMAPS:
         try:
             xml = fetch(sm)
         except Exception as exc:  # noqa: BLE001
             print(f"WARN   could not read {sm}: {exc}")
             continue
-        needle = CFG.get("url_filter", "")
         for loc in re.findall(r"<loc>([^<]+)</loc>", xml):
             if needle in loc:
                 found.append(loc)
-    return sorted(set(found))
+    return found
+
+
+def index_urls():
+    """Episode URLs harvested by walking the show's own episode listing.
+
+    A sitemap can lag the site. Crux's was missing the newest Critical Capital
+    episode on 2026-09-18, which is the one case that matters, because the
+    newest episode is the whole point of checking. Walking the listing pages
+    costs a couple of requests and does not have that failure mode, so both
+    sources are read and the results unioned.
+    """
+    pages = CFG.get("index_pages") or []
+    if not pages:
+        return []
+    if not CFG.get("index_link_pattern"):
+        sys.exit("index_pages is set but index_link_pattern is not; the "
+                 "scraper cannot tell which links on the page are episodes "
+                 "(see docs/ADDING-A-PODCAST.md)")
+    link_re = re.compile(CFG["index_link_pattern"])
+    next_re = (re.compile(CFG["index_next_pattern"])
+               if CFG.get("index_next_pattern") else None)
+    found, visited = [], set()
+    for start in pages:
+        url = start
+        for _ in range(50):  # pagination guard; no show has 50 index pages
+            if not url or url in visited:
+                break
+            visited.add(url)
+            try:
+                page = fetch(url)
+            except Exception as exc:  # noqa: BLE001
+                print(f"WARN   could not read {url}: {exc}")
+                break
+            for href in link_re.findall(page):
+                found.append(urllib.parse.urljoin(url, html.unescape(href)))
+            nxt = next_re.search(page) if next_re else None
+            url = (urllib.parse.urljoin(url, html.unescape(nxt.group(1)))
+                   if nxt else None)
+            time.sleep(DELAY_SECONDS)
+    needle = CFG.get("url_filter", "")
+    return [u for u in found if needle in u]
+
+
+def episode_urls():
+    """Every known episode URL for this show, from every configured source."""
+    return sorted(set(sitemap_urls()) | set(index_urls()))
+
+
+def published_date(page):
+    """The episode's publication date, however this publisher stores it."""
+    for pattern, fmt in PUBLISHED:
+        m = pattern.search(page)
+        if not m:
+            continue
+        raw = clean(m.group(1))
+        if fmt == "iso":
+            return raw
+        try:
+            return datetime.strptime(raw, fmt).strftime("%Y-%m-%d")
+        except ValueError:
+            print(f"WARN   date {raw!r} does not match format {fmt!r}")
+    return ""
+
+
+def content_region(page):
+    """Narrow the page to the region that holds the episode's own content.
+
+    Without this the parser sees the whole document, and a template that drops
+    a stray capitalized label into the navigation or the footer can start or
+    extend the transcript. Shows whose pages need no narrowing leave
+    content_start and content_end unset and get the whole document.
+    """
+    if CONTENT_START:
+        m = CONTENT_START.search(page)
+        if m:
+            page = page[m.end():]
+        else:
+            print("WARN   content_start did not match; using the whole page")
+    if CONTENT_END:
+        m = CONTENT_END.search(page)
+        if m:
+            page = page[:m.start()]
+        else:
+            print("WARN   content_end did not match; using the whole page")
+    return page
 
 
 def parse(page, url):
     tally = {}
     title = clean(meta(r"<title>(.*?)</title>", page)) or "Untitled"
-    title = re.sub(r"\s*\|\s*Latitude Media\s*$", "", title)
+    if TITLE_SUFFIX:
+        title = TITLE_SUFFIX.sub("", title)
 
     ep = {
         "title": apply_corrections(title, tally),
         "url": url,
-        "published": meta(
-            r'<meta property="article:published_time" content="([^"]+)"', page),
+        "published": published_date(page),
         "modified": meta(
             r'<meta property="article:modified_time" content="([^"]+)"', page),
         "megaphone_id": meta(
@@ -176,7 +294,8 @@ def parse(page, url):
             if node.get("@type") == "NewsArticle":
                 ep["keywords"] = node.get("keywords") or ep["keywords"]
 
-    paras = [clean(p) for p in re.findall(r"<p[^>]*>(.*?)</p>", page, re.S)]
+    body = content_region(page)
+    paras = [clean(p) for p in re.findall(r"<p[^>]*>(.*?)</p>", body, re.S)]
     paras = [p for p in paras if p]
 
     # Drop sponsor reads, credits and ad markers first, so a boilerplate block
@@ -360,9 +479,7 @@ def main(argv):
             continue
 
         if ep is None:
-            date = meta(
-                r'<meta property="article:published_time" content="([^"]+)"',
-                page)[:10]
+            date = published_date(page)[:10]
             counts["no transcript"] += 1
             rows.append([date, slug, "no transcript", "", "", url])
             print(f"[{i:>3}/{len(urls)}] NONE   no transcript  {slug[:60]}")

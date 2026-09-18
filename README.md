@@ -30,13 +30,17 @@ specification that makes the failure modes explicit and testable.
 
 ## What is in it
 
-| | |
-|---|---|
-| Shows covered | 1 (Catalyst), 1 scaffolded (Critical Capital) |
-| Episodes with notes | 125 |
-| Note text | ~255,000 words |
-| Median note | ~2,000 words |
-| Span | 2022-11 to 2026-09 |
+As of 2026-09-18:
+
+| | Catalyst | Critical Capital | Total |
+|---|---|---|---|
+| Episodes with notes | 125 | 11 | **136** |
+| Note text | ~255,000 words | ~25,000 words | **~280,000 words** |
+| Median note | 1,998 words | 2,254 words | 2,000 words |
+| Span | 2022-11 to 2026-09 | 2026-04 to 2026-09 | |
+
+Counted as conversations rather than episodes the total is 135: one Catalyst
+episode is published twice, eleven months apart under different titles.
 
 ---
 
@@ -90,7 +94,7 @@ podcasts/
     synthesis/
       hindsight-seeds.md    cross-episode threads, for later writing
       archive-caveats.md    data-quality facts about the corpus itself
-  critical-capital/     scaffolded, not yet populated
+  critical-capital/     same layout, 11 notes
 scripts/                scrape, validate, dedupe, stats, new-episode detection
 run.py                  task runner
 ```
@@ -98,6 +102,14 @@ run.py                  task runner
 Show-specific facts live in `podcast.json` and `SHOW-PROFILE.md`. Nothing about
 any particular podcast is hard-coded into the scripts or the spec, which is
 what makes adding a second show cheap.
+
+The second show tested that claim harder than expected. Critical Capital is a
+Latitude Media programme whose transcripts Latitude does not publish; they come
+from Crux, its co-producer, on an entirely different content management system.
+Different listing pages, different title format, no publication-date metadata,
+and the transcript buried in a page that also renders its navigation menu and
+footer as body text. All of it turned out to be expressible as configuration.
+No code in `scripts/` knows which show it is working on.
 
 ---
 
@@ -208,10 +220,21 @@ who does not correct a host may be being polite, may not have caught it, or may
 be mid-thought. An uncorrected restatement never becomes a claim the guest
 endorsed.
 
-That check earns its place. In one independent verification pass over 24 notes,
-it found a host's opinion promoted into an expert's testimony, a cost figure
-restated on air off by a factor of a hundred, and a guest's ranking attributed
-to him that he had never made.
+That check earns its place. One independent pass over 24 notes found a host's
+opinion promoted into an expert's testimony, a cost figure restated on air off
+by a factor of a hundred, and a guest's ranking attributed to him that he had
+never made.
+
+A later pass over 11 notes found, among others, a tariff ladder recorded as
+matched at every step when the point of the passage was that the last step went
+unmatched; a concession reversed, so the host's "I take the point" became the
+guest's; eleven named companies and agencies erased from a single note,
+including from its most citable claim; and a date imported from a different
+episode's transcript into the very bullet flagging a dating problem.
+
+**Verification is done by an agent that did not write the note.** That is the
+part that matters. In both rounds the writers had reviewed their own work and
+reported it clean, and every error above survived that review.
 
 ---
 
@@ -243,20 +266,36 @@ would bite a careless reader:
 - **A published date is not always a recording date.** At least two episodes
   are a rerun or a delayed release, so anything ordered by date needs checking.
 - **Show notes sometimes contradict the transcript.** Several figures appear
-  only in the marketing blurb and are demonstrably wrong. Notes are written from
-  the conversation, never from the blurb.
+  only in the marketing blurb and are demonstrably wrong. In one case the blurb
+  presents a headline figure as the guest's own finding when he credits it on
+  air to a named outside researcher. Notes are written from the conversation,
+  never from the blurb.
+- **The two shows are different kinds of evidence.** Catalyst mostly interviews
+  analysts and researchers, and the host argues with them. Critical Capital
+  mostly interviews founders and investors about the category they personally
+  sell into, and the host builds on their answers rather than testing them. Both
+  are legitimate; blending them without marking which is which would silently
+  upgrade a founder's plan into a finding.
 
 ---
 
 ## Adding another podcast
 
-See `docs/ADDING-A-PODCAST.md`. The short version: create a directory under
-`podcasts/`, write a `podcast.json` with the publisher's sitemaps and a URL
-filter, fetch a few episodes, read them, fill in the `SHOW-PROFILE.md`, and
-hand-write one or two notes as reference examples before scaling up.
+See `docs/ADDING-A-PODCAST.md`. The short version: find out who actually
+publishes the transcripts, create a directory under `podcasts/`, write a
+`podcast.json`, fetch a few episodes, read them, fill in the `SHOW-PROFILE.md`,
+and hand-write one or two notes as reference examples before scaling up.
 
-Verified and ready to add from the same publisher: `open-circuit-` (67
-episodes) and `green-blueprint-` (30).
+**Step zero is not optional.** The network that publishes a show does not
+necessarily publish its transcripts, and the obvious sitemap can be both
+incomplete and stale. Latitude carried 2 of Critical Capital's 12 episodes and
+no transcript text at all. Crux's own sitemap listed 11 of 12, and the one it
+omitted was the newest, which is the only one a routine check is looking for.
+Both failure modes are silent. Five minutes of checking up front avoids an
+archive that quietly stops updating.
+
+Verified as publishing full transcripts on Latitude, and ready to add:
+`open-circuit-` (67 episodes) and `green-blueprint-` (30).
 
 ---
 

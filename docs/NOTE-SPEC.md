@@ -1,6 +1,6 @@
 # Episode note specification
 
-**Version 1.3**
+**Version 1.5**
 
 You are writing a single `note.md` for a single podcast episode, from
 its transcript. Read this whole file before starting. Reference examples are
@@ -130,9 +130,9 @@ needed to be 2,300 words should be 2,300 words.
 
 ### The question
 
-One line. The central question the episode is organized around. Shayle usually
-states it explicitly in the opening monologue, and it is often close to the
-episode title. Phrase it as a real question a person would ask.
+One line. The central question the episode is organized around. Hosts on these
+shows usually state it explicitly in the opening monologue, and it is often
+close to the episode title. Phrase it as a real question a person would ask.
 
 ### The answer
 
@@ -187,7 +187,7 @@ Open with a one-line date stamp, for example: *All figures as stated on
 lead times and deployment figures.
 
 Attribute every claim: `(Guest surname)`, `(Host surname)`, or the original source where the
-guest cites one, for example `(EPRI study, cited by Lubershane)`.
+guest cites one, for example `(EPRI study, cited by the guest's surname)`.
 
 Where a speaker states a number loosely or ambiguously, record the ambiguity
 rather than resolving it. A note saying "he puts it around 6% but the base is
@@ -201,9 +201,50 @@ where the host pushed back.
 
 **This section is not optional padding.** Flattening hedges into confident
 assertions is the single most likely way a note misrepresents its source. Guests
-on this show qualify heavily, and a note that drops the qualifiers reads cleaner
-while being less true. If you found nothing contested, look again; near-zero
-episodes have no disagreement or uncertainty at all.
+qualify heavily, and a note that drops the qualifiers reads cleaner while being
+less true.
+
+If you genuinely found nothing contested, look again before concluding it. On a
+show where the host pushes back, near-zero episodes have no disagreement at all.
+On a show where the host mostly builds on the answers, an episode with no
+disagreement is common and you should say so plainly rather than manufacturing
+some. In that case the useful content of this section is what went unexamined:
+which load-bearing claims nobody tested, what interest the speaker has in the
+claim being true, and which questions the episode did not reach. Your show
+profile says which kind of show you are working on.
+
+---
+
+## Place each fact once
+
+Three independent verification passes over nine notes found the same defect in
+every one of them, and it is the largest source of length that should not be
+there. A figure gets stated in "The argument" where it reads as reasoning,
+indexed again in "Claims worth citing," and sometimes defined around a third
+time in "What you need to know first."
+
+Each section has a distinct job and they do not overlap.
+
+- **The argument** carries the reasoning. It needs the figures that *are*
+  reasoning turns and no others. A number you could delete without breaking the
+  logic of the paragraph belongs somewhere else.
+- **What you need to know first** defines terms. If a bullet restates a sentence
+  from the argument rather than defining a word in it, cut the bullet.
+- **Details worth keeping** stays qualitative: examples, anecdotes, secondary
+  points. It is not an overflow bin for numbers.
+- **Claims worth citing** is the index of figures. In a well-built note most of
+  its bullets are new on first reading.
+- **Where it's contested** *points at* claims rather than re-deriving them. One
+  clause naming a figure already in Claims is enough. Restating the figure, its
+  source and its caveat a second time is not.
+
+The testable version: in the reference notes, 7 of 9 claims bullets state
+something the reader has not already seen. In the nine notes that failed this,
+the ratio ran the other way, in one case 10 of 12 restating.
+
+This does not compete with the word-count rule above. Fixing it removes words
+that were never doing work, and a note still running long afterwards is running
+long for the right reason.
 
 ---
 
@@ -236,6 +277,14 @@ is not a speaker and takes no position in the conversation.
   instead ("a federal energy research program"), or name it as the transcript
   does and say the speaker does not spell it out. The reader needs to understand
   the sentence, not to learn the acronym.
+- **That rule targets terms a general reader would not already know.** An
+  abbreviation in ordinary use, or the familiar name of a well-known law, is
+  vocabulary rather than a fact about the episode, and writing it plainly costs
+  the reader nothing. Applied to those, the rule produces circumlocutions that
+  make the note harder to read while protecting nothing. Two were observed in a
+  single batch: world economic output written around at length because a speaker
+  said "GDP," and a statute named on air rendered as "post-crisis financial
+  regulation." Both were worse than the plain word.
 - Use em-dashes sparingly. Prefer two sentences, a semicolon, a colon, a comma,
   or parentheses.
 - Write for someone smart who does not work in energy. No condescension, no
@@ -281,12 +330,19 @@ particular attention wherever the guest lists contributing factors,
 distinguishes local from global effects, or says something would have happened
 anyway.
 
-*The host's framing.* Shayle's opening monologue states the premise before the
-guest has spoken, and he restates the guest's points as the conversation goes.
-Those restatements are not always faithful. In one episode the monologue treats
-a labor shortage as the binding constraint while the guest ranks it third,
-behind power and community opposition. In another, the host twice restates a
-guest's inferred figure at the wrong value and the guest lets it pass. **Where
+*The host's framing.* These shows open with a host monologue that states the
+premise before the guest has spoken, and the host restates the guest's points as
+the conversation goes. Those restatements are not always faithful, and the
+monologue is usually scripted, so it is tighter and more quotable than anything
+the guest says extemporaneously. That is exactly what makes it dangerous: it is
+the version a note reaches for.
+
+Observed cases. In one episode the monologue treats a labor shortage as the
+binding constraint while the guest ranks it third, behind power and community
+opposition. In another, the host twice restates a guest's inferred figure at the
+wrong value and the guest lets it pass. In a third, the monologue names a single
+binding constraint on a cost where the guest describes it as one input among
+several. **Where
 the host's framing and the guest's own words diverge, the guest governs.** Write
 the note from what the guest actually said, and if the divergence is
 substantive, one line in "Where it's contested" recording it is usually worth

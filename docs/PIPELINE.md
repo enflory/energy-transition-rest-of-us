@@ -29,13 +29,34 @@ podcasts/<show>/synthesis/                              (cross-episode work)
 
 ## Stage 1: discovery
 
-`scripts/scrape.py` reads the publisher's sitemaps and keeps URLs containing the
-show's `url_filter`. Nothing about any show is hard-coded; both come from
+`scripts/scrape.py` reads every configured source and keeps URLs containing the
+show's `url_filter`. Nothing about any show is hard-coded; it all comes from
 `podcast.json`.
 
 Discovery is separated from fetching because the useful daily question is "is
 there anything new?", not "re-download everything." `scripts/new_episodes.py`
 answers it without writing anything.
+
+**Two sources, unioned, because a sitemap is not a contract.** The obvious
+source is the publisher's sitemap, and for Catalyst it is sufficient. It was not
+for Critical Capital. On 2026-09-18 the Crux sitemap listed 11 of that show's 12
+episodes, and the one it omitted was the newest, published three days earlier.
+A scraper reading only the sitemap would have reported "nothing new" for exactly
+the episode the daily check exists to find, and would have kept doing so.
+
+So a show can also declare `index_pages`, its own episode listing, which the
+scraper walks page by page following a configured "next" link. Results from both
+sources are unioned. The sitemap is cheap and usually complete; the listing is
+never stale, because it is the page the publisher updates to announce an
+episode. Running both costs two extra requests and removes a failure mode that
+is silent by construction.
+
+**The publisher of a show is not always the publisher of its transcripts.**
+Critical Capital is a Latitude Media show whose transcripts Latitude does not
+publish. They come from Crux, its co-producer, on an entirely different CMS.
+Everything that differs between the two sites is configuration: which pages list
+the episodes, what the title suffix is, where the date is and in what format,
+and which region of the page holds the content. No code is show-aware.
 
 **Three states, not two.** A URL is one of: never seen; seen but the publisher
 ships no transcript for it; or scraped. That middle state is real, and on
@@ -52,6 +73,24 @@ One second between requests. Already-saved episodes are skipped unless you pass
 `refetch`.
 
 Parsing is where the interesting bugs were.
+
+**The content region is narrowed before anything else.** Site templates put
+navigation menus, inline CSS blocks, author bios, related-episode cards and the
+footer into `<p>` elements on the same page as the transcript. A show can
+declare `content_start` and `content_end` regexes bounding the part of the page
+that is actually the episode, and everything outside is discarded before a
+single paragraph is read. This is strictly better than enumerating each piece of
+furniture as boilerplate: it is one rule instead of eight, and it keeps working
+when the footer changes. Both anchors print a warning and fall back to the whole
+page if they stop matching, so a template change surfaces instead of silently
+corrupting a transcript.
+
+**Zero-width characters are stripped.** Some content management systems emit a
+zero-width joiner immediately before a speaker label. It is invisible in every
+viewer, and it makes the paragraph fail the speaker-label regex, so the line
+drops out of the dialogue for no visible reason. Removing them is normalization
+rather than editing: they carry no meaning and there is no rendering in which
+they matter.
 
 **Boilerplate is filtered before the transcript start is located.** A transcript
 paragraph opens with a speaker label, matched with a regex on the shape

@@ -11,6 +11,9 @@
   "url_filter": "/catalyst-",
   "delay_seconds": 1.0,
 
+  "_comment_title_suffix": "The <title> element ends with the publisher's name on every page. Stripped so folder names and note titles match what the episode is called.",
+  "title_suffix": "\\s*\\|\\s*Latitude Media\\s*$",
+
   "_comment_corrections": "Published transcripts render the host's name phonetically. Each entry is applied to the whole document and tallied in the transcript's frontmatter, so every change is visible.",
   "corrections": [
     {
