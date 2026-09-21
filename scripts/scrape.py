@@ -435,8 +435,12 @@ def write_manifest(rows):
         merged[r[5]] = r
     merged.update(rows_from_disk())
 
+    # csv.writer emits CRLF by default, which .gitattributes then normalizes
+    # to LF on commit. The net effect is a manifest that shows as modified
+    # after every fetch even when not one field changed, which buries a real
+    # change in noise. Write LF directly.
     with open(MANIFEST, "w", encoding="utf-8", newline="") as f:
-        w = csv.writer(f)
+        w = csv.writer(f, lineterminator="\n")
         w.writerow(["published", "title", "status", "words", "folder", "url"])
         for r in sorted(merged.values(), key=lambda r: (r[0] or "9999", r[1])):
             w.writerow(r)
