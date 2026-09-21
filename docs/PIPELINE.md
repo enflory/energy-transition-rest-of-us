@@ -1,29 +1,72 @@
 # The pipeline
 
-How a published episode becomes a note, and why each stage works the way it
-does. Most of the design here is a response to something that went wrong.
+How a published episode or post becomes a note, and why each stage works the
+way it does. Most of the design here is a response to something that went
+wrong.
 
 ---
 
 ## Overview
 
 ```
-publisher sitemap
+publisher sitemap + index pages
       |
-      |  scripts/scrape.py      config: podcasts/<show>/podcast.json
+      |  scripts/scrape.py      config: sources/<source>/source.json
       v
-podcasts/<show>/episodes/<date>-<slug>/transcript.md   (not committed)
-podcasts/<show>/manifest.csv                            (committed)
+sources/<source>/episodes/<date>-<slug>/transcript.md   (not committed)
+                 posts/   <date>-<slug>/essay.md        (not committed)
+sources/<source>/manifest.csv                           (committed)
       |
-      |  an agent, working to docs/NOTE-SPEC.md + the show profile
+      |  an agent, working to docs/NOTE-SPEC.md + the source profile
       v
-podcasts/<show>/episodes/<date>-<slug>/note.md          (committed)
+sources/<source>/<episodes|posts>/<date>-<slug>/note.md (committed)
       |
       |  scripts/validate_notes.py   structure
       |  three verification checks   accuracy
       v
-podcasts/<show>/synthesis/                              (cross-episode work)
+sources/<source>/synthesis/                             (cross-item work)
 ```
+
+---
+
+## Two content types
+
+A *source* is a publication; an *item* is one episode or one post. Sources come
+in two kinds, declared by `content_type` in the config, and the difference is
+confined to `scripts/archive.py`:
+
+| | `podcast` | `essay` |
+|---|---|---|
+| items live in | `episodes/` | `posts/` |
+| the document is | `transcript.md` | `essay.md` |
+| found by | the first speaker label | the configured content region |
+| note names | `episode:` / `guest:` | `post:` / `author:` |
+| note length | fixed 900-2,000 band | scaled to the source |
+
+**Why a second parser at all.** The podcast reader locates a transcript by
+finding the first paragraph that opens `Name:`. An essay has no speaker labels,
+so that reader finds no start and returns nothing. Pointed at a newsletter it
+produces a clean run with zero errors in which every page is logged as having
+no transcript, which is the most expensive kind of wrong: it looks like a
+finding about the publisher.
+
+**What the essay reader keeps that the podcast reader does not.** A transcript
+is a flat list of attributed paragraphs, and flattening it loses nothing. An
+essay argues through its structure, so the reader walks the content region in
+document order and preserves headings, list items, block quotes as `> ` lines,
+and figures as `[FIGURE: caption] url` markers.
+
+Block quotes are the load-bearing one. In a conversation, who is speaking is
+marked on every paragraph; in an essay it is marked once, by quotation, and a
+parser that drops it hands the note-writer a document in which the author
+appears to assert things they were quoting in order to argue with. On Steel For
+Fuel the most recent post quotes the author's own two-year-old position at
+length and then spends the rest of the piece revising it.
+
+Figures are recorded rather than dropped for the same reason the content
+anchors warn on failure: the loss is real and it should be visible. Half the
+figures in that archive carry no caption, and some posts put a number in a
+chart and never restate it in prose.
 
 ---
 
@@ -31,7 +74,7 @@ podcasts/<show>/synthesis/                              (cross-episode work)
 
 `scripts/scrape.py` reads every configured source and keeps URLs containing the
 show's `url_filter`. Nothing about any show is hard-coded; it all comes from
-`podcast.json`.
+`source.json`.
 
 Discovery is separated from fetching because the useful daily question is "is
 there anything new?", not "re-download everything." `scripts/new_episodes.py`
@@ -59,11 +102,16 @@ the episodes, what the title suffix is, where the date is and in what format,
 and which region of the page holds the content. No code is show-aware.
 
 **Three states, not two.** A URL is one of: never seen; seen but the publisher
-ships no transcript for it; or scraped. That middle state is real, and on
-Catalyst it covers 21 of 146 pages, which publish show notes only. Without the
-distinction they reappear as pending work on every run forever. The manifest is
-what carries it, which is why the manifest is committed and the transcripts are
-not.
+ships no document for it; or scraped. That middle state is real, and on
+Catalyst it covers 21 of 146 pages, which publish show notes only. On Steel For
+Fuel it covers exactly one, the placeholder page a Substack carries before its
+first real post. Without the distinction they reappear as pending work on every
+run forever. The manifest is what carries it, which is why the manifest is
+committed and the documents are not.
+
+The status string is per content type, `no transcript` or `no essay`, so the
+wording matches the source without rewriting the rows already committed for
+Catalyst.
 
 ---
 
@@ -102,7 +150,7 @@ reverse it.
 
 **Some labels look like speakers and are not.** `Tag:` is the show's intro
 bumper and appeared in 48 Catalyst episodes before it was caught. The
-`non_speakers` list in `podcast.json` holds these.
+`non_speakers` list in `source.json` holds these.
 
 **Corrections are declared, applied document-wide, and counted.** Publishers
 misspell names consistently; Catalyst's host is usually rendered phonetically.
@@ -111,8 +159,15 @@ transcript's frontmatter records how many times each fired. Nothing is silently
 edited. Keep this list minimal: a correction edits the source text, so it should
 only ever cover a demonstrated, repeated publisher error, never a judgment call.
 
+**A sitemap that is complete today is still not a contract.** Steel For Fuel's
+listed all 57 posts, which is unusual, and it is still read alongside the
+publication's JSON archive endpoint for the newest twelve. That endpoint has a
+trap worth recording: requesting more than 30 at a time returns 30 and then an
+empty page, so a paging loop stops early and reports 30 of 57 with no error.
+Bulk discovery uses the sitemap; the endpoint is only the freshness check.
+
 **The manifest merges rather than overwrites.** A partial run must not drop
-episodes it did not touch. Precedence is previous manifest, then this run, then
+items it did not touch. Precedence is previous manifest, then this run, then
 the archive on disk, which is authoritative for anything actually saved. An
 earlier version rewrote the file wholesale and a partial run cut it from 146
 rows to 48.
@@ -121,18 +176,20 @@ rows to 48.
 
 ## Stage 3: writing the note
 
-An agent reads the specification, the show profile, two reference notes, and
-then the transcript in full. It writes one note. It does not read other
-episodes.
+An agent reads the specification, the source profile, two reference notes, and
+then the document in full. It writes one note. It does not read other items.
 
 That isolation is deliberate and has two payoffs. Each note is independently
 trustworthy, and the work parallelizes with no shared state, so eight agents can
 run at once. The cost is that nothing cross-episode can be said in a note, which
 is why `synthesis/` exists.
 
-`python run.py brief <show>` prints the exact brief to use. It encodes decisions
-that took a while to learn, including the constraints, the file list and the
-verification checks.
+`python run.py brief <source>` prints the exact brief to use. It encodes
+decisions that took a while to learn, including the constraints, the file list
+and the verification checks. The brief is generated from the source's content
+type, so it names posts rather than episodes where that is what they are, and
+it carries the attribution check that applies: the host's framing for a
+conversation, quoted voice for an essay.
 
 ---
 
@@ -156,6 +213,21 @@ worse than useless for a while:
 - It read a sentence beginning "2030." as an ordered-list item, so agents
   reworded correct prose to satisfy it. The list-marker pattern now requires one
   or two digits.
+
+**The length rule is scaled for essays, and the scaling was itself wrong once.**
+Transcripts are always several times longer than their notes, so a fixed band
+works. Essays are not: eleven Steel For Fuel posts are shorter than the 900-word
+floor. The band is therefore computed from the document, and a note that has
+outgrown its source is an error rather than a warning.
+
+The first version set the ceiling at half the source, which sounded principled
+and rejected a hand-written reference note at 55%. Checking it against the
+existing corpus showed why: a note has fixed overhead, seven sections and an
+attribution on every claim, so the shortest podcast transcripts already produce
+the least compressed notes, and the shortest of all, 1,797 words, produced an
+accepted 1,518-word note at 84%. The ceiling is now two thirds, and the error
+allows a 400-word format floor, below which the format binds rather than the
+material.
 
 **Accuracy, by re-reading.** Three checks against the transcript: a fact check,
 a forest test, and an attribution check. `docs/NOTE-SPEC.md` describes them in

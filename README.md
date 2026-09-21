@@ -2,9 +2,10 @@
 
 Plain-language notes on the energy transition, built from primary sources.
 
-This repository reads energy podcasts closely and writes down what they
-actually said: one structured note per episode, accurate enough to quote in a
-meeting, written for someone smart who does not work in energy.
+This repository reads energy podcasts and newsletters closely and writes down
+what they actually said: one structured note per episode or post, accurate
+enough to quote in a meeting, written for someone smart who does not work in
+energy.
 
 It is both an archive and a pipeline. The notes are the product. The scripts,
 the specification and the verification process are here so that the notes are
@@ -16,8 +17,9 @@ reproducible rather than merely asserted.
 
 There is a great deal of excellent primary-source material about the energy
 transition, mostly in long-form interviews with the people actually building
-the system. It is also eight hours a month, and almost none of it is in a form
-you can hand to a colleague who asked a reasonable question in a meeting.
+the system, and in newsletters written by people close to it. It is also eight
+hours a month plus a reading list, and almost none of it is in a form you can
+hand to a colleague who asked a reasonable question in a meeting.
 
 The usual fix is a summary, and the usual summary fails in a specific way: it
 produces a pile of individually true facts that lose the argument. You come
@@ -30,14 +32,21 @@ specification that makes the failure modes explicit and testable.
 
 ## What is in it
 
-As of 2026-09-18:
+As of 2026-09-21:
 
-| | Catalyst | Critical Capital | Total |
-|---|---|---|---|
-| Episodes with notes | 125 | 11 | **136** |
-| Note text | ~255,000 words | ~25,000 words | **~280,000 words** |
-| Median note | 1,998 words | 2,254 words | 2,000 words |
-| Span | 2022-11 to 2026-09 | 2026-04 to 2026-09 | |
+| | Catalyst | Critical Capital | Steel For Fuel | Total |
+|---|---|---|---|---|
+| Content type | podcast | podcast | essay | |
+| Items with notes | 125 | 11 | 2 | **138** |
+| Items awaiting notes | 0 | 0 | 54 | **54** |
+| Note text | ~255,000 words | ~25,000 words | ~1,300 words | **~281,000 words** |
+| Median note | 1,998 words | 2,254 words | n/a | |
+| Span | 2022-11 to 2026-09 | 2026-04 to 2026-09 | 2023-03 to 2026-09 | |
+
+Steel For Fuel was added on 2026-09-21. Its 56 essays are fetched and two
+reference notes are hand-written; the remaining 54 notes are not yet written.
+Note-length figures are not comparable across content types, because essay
+notes are sized against their source.
 
 Counted as conversations rather than episodes the total is 135: one Catalyst
 episode is published twice, eleven months apart under different titles.
@@ -80,26 +89,36 @@ superseded, and a `disclosure:` when a speaker states a financial interest.
 ```
 docs/
   NOTE-SPEC.md          the specification every note is written to
-  PIPELINE.md           how an episode becomes a note, end to end
-  ADDING-A-PODCAST.md   how to add a second, third, fourth show
-podcasts/
-  catalyst/
-    podcast.json        scraper config: sitemaps, URL filter, corrections
-    SHOW-PROFILE.md     this show's disclosure norms, quirks, reference notes
-    manifest.csv        every episode ever seen, and its status
+  PIPELINE.md           how an item becomes a note, end to end
+  ADDING-A-SOURCE.md    how to add another podcast or newsletter
+sources/
+  catalyst/                     a podcast source
+    source.json         scraper config: sitemaps, URL filter, corrections
+    SOURCE-PROFILE.md   this source's disclosure norms, quirks, reference notes
+    manifest.csv        every item ever seen, and its status
     episodes/
       2026-09-10-do-data-centers-really-increase-electricity-prices/
         transcript.md   not committed; regenerate with a fetch
         note.md         committed
     synthesis/
-      hindsight-seeds.md    cross-episode threads, for later writing
+      hindsight-seeds.md    cross-item threads, for later writing
       archive-caveats.md    data-quality facts about the corpus itself
   critical-capital/     same layout, 11 notes
-scripts/                scrape, validate, dedupe, stats, new-episode detection
+  steel-for-fuel/               an essay source
+    source.json         content_type: essay
+    posts/
+      2026-09-21-for-ai-energy-is-nothing-and-energy-is-everything-reprise/
+        essay.md        not committed; regenerate with a fetch
+        note.md         committed
+scripts/
+  archive.py            what differs between a podcast and an essay; nothing else knows
+  scrape.py             fetch and parse, both content types
+  validate_notes.py     structural check
+  dedupe_check.py  stats.py  new_episodes.py
 run.py                  task runner
 ```
 
-Show-specific facts live in `podcast.json` and `SHOW-PROFILE.md`. Nothing about
+Show-specific facts live in `source.json` and `SOURCE-PROFILE.md`. Nothing about
 any particular podcast is hard-coded into the scripts or the spec, which is
 what makes adding a second show cheap.
 
@@ -270,21 +289,35 @@ would bite a careless reader:
   presents a headline figure as the guest's own finding when he credits it on
   air to a named outside researcher. Notes are written from the conversation,
   never from the blurb.
-- **The two shows are different kinds of evidence.** Catalyst mostly interviews
+- **The sources are different kinds of evidence.** Catalyst mostly interviews
   analysts and researchers, and the host argues with them. Critical Capital
   mostly interviews founders and investors about the category they personally
-  sell into, and the host builds on their answers rather than testing them. Both
-  are legitimate; blending them without marking which is which would silently
-  upgrade a founder's plan into a finding.
+  sell into, and the host builds on their answers rather than testing them.
+  Steel For Fuel is one investor's own written argument, with no interlocutor
+  at all. All three are legitimate; blending them without marking which is
+  which would silently upgrade a founder's plan, or an essayist's stated bet,
+  into a finding.
+- **Charts do not survive the pipeline.** It is text-only. That costs nothing
+  on the podcasts and costs real content on an essay source: Steel For Fuel
+  carries 524 figures across 56 posts, half of them uncaptioned. The scraper
+  records each figure's position and URL so the gap is visible rather than
+  silent, and notes say so where an argument rests on one.
 
 ---
 
-## Adding another podcast
+## Adding another source
 
-See `docs/ADDING-A-PODCAST.md`. The short version: find out who actually
-publishes the transcripts, create a directory under `podcasts/`, write a
-`podcast.json`, fetch a few episodes, read them, fill in the `SHOW-PROFILE.md`,
-and hand-write one or two notes as reference examples before scaling up.
+See `docs/ADDING-A-SOURCE.md`. The short version: decide the content type, find
+out who actually publishes the text, create a directory under `sources/`, write
+a `source.json`, fetch a few items, read them, fill in the
+`SOURCE-PROFILE.md`, and hand-write one or two notes as reference examples
+before scaling up.
+
+**Two content types.** `podcast` for conversations with transcripts and `essay`
+for written pieces. The test is not what the publisher calls itself but whether
+the document has speaker labels: the podcast parser finds a transcript by
+locating the first `Name:` paragraph, so pointed at a newsletter it produces a
+clean run in which every page is logged as having no transcript.
 
 **Step zero is not optional.** The network that publishes a show does not
 necessarily publish its transcripts, and the obvious sitemap can be both

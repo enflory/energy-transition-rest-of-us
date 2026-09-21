@@ -1,69 +1,58 @@
 #!/usr/bin/env python3
 """
-Find episodes that still need work, and print the brief for writing their notes.
+Find items that still need work, and print the brief for writing their notes.
 
 Usage:
-    python scripts/new_episodes.py                 # every podcast
-    python scripts/new_episodes.py catalyst        # one podcast
+    python scripts/new_episodes.py                   # every source
+    python scripts/new_episodes.py catalyst          # one source
     python scripts/new_episodes.py catalyst --brief  # print the agent brief too
 
 This is the "what do I do now?" command. It answers three questions:
 
-  1. Which published episodes have we never scraped?
-  2. Which scraped transcripts have no note yet?
+  1. Which published items have we never scraped?
+  2. Which saved documents have no note yet?
   3. What exactly do I paste into Claude Code to get those notes written?
+
+It works for both content types. The wording of every report and of the brief
+itself comes from the source's content type, so a run against a newsletter
+talks about posts and essays rather than episodes and transcripts, and points
+the writer at the half of the spec that applies.
 
 It only reads. It never scrapes and never writes a note, so it is safe to run
 at any time and costs nothing but a sitemap fetch.
 """
 
-import json
 import os
 import re
 import sys
-import urllib.request
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PODCASTS = os.path.join(ROOT, "podcasts")
+import archive
+import scrape
 
-UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-      "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+ROOT = archive.ROOT
 
 
-def fetch(url):
-    req = urllib.request.Request(url, headers={"User-Agent": UA})
-    with urllib.request.urlopen(req, timeout=60) as r:
-        return r.read().decode("utf-8", "replace")
+def published_urls(source):
+    """Every item URL for this source, from every configured source of URLs.
+
+    This delegates to the scraper rather than reimplementing discovery. An
+    earlier version read only the sitemaps, which quietly disagreed with what
+    a fetch would do: a source declaring `index_pages` got its freshness check
+    during `fetch` and not during the status check, so `run.py` could report
+    "nothing new to scrape" for a just-published item and then scrape it on
+    the very next fetch. Both now ask the same question.
+    """
+    scrape.load_config(source)
+    return scrape.episode_urls()
 
 
-def podcast_names():
-    if not os.path.isdir(PODCASTS):
-        return []
-    return sorted(d for d in os.listdir(PODCASTS)
-                  if os.path.isfile(os.path.join(PODCASTS, d, "podcast.json")))
-
-
-def published_urls(cfg):
-    """Every episode URL for this show, from the publisher's sitemaps."""
-    found, needle = [], cfg.get("url_filter", "")
-    for sm in cfg.get("sitemaps", []):
-        try:
-            xml = fetch(sm)
-        except Exception as exc:  # noqa: BLE001
-            print(f"  WARN could not read {sm}: {exc}")
-            continue
-        found += [loc for loc in re.findall(r"<loc>([^<]+)</loc>", xml)
-                  if needle in loc]
-    return sorted(set(found))
-
-
-def saved_urls(episodes_dir):
-    """URLs already scraped, read from each transcript's frontmatter."""
+def saved_urls(items_dir, source_file):
+    """URLs already scraped, read from each document's frontmatter."""
     urls = {}
-    if not os.path.isdir(episodes_dir):
+    if not os.path.isdir(items_dir):
         return urls
-    for folder in sorted(os.listdir(episodes_dir)):
-        path = os.path.join(episodes_dir, folder, "transcript.md")
+    for folder in sorted(os.listdir(items_dir)):
+        path = os.path.join(items_dir, folder, source_file)
         if not os.path.isfile(path):
             continue
         with open(path, encoding="utf-8") as f:
@@ -75,14 +64,14 @@ def saved_urls(episodes_dir):
 
 
 def manifest_status(show):
-    """url -> status, from the manifest of every episode ever looked at.
+    """url -> status, from the manifest of every item ever looked at.
 
     This is what separates "we have never tried this URL" from "we tried it
-    and the publisher ships no transcript for it." Without the distinction,
-    pages that will never have a transcript show up as pending work forever.
+    and the publisher ships no document for it." Without the distinction,
+    pages that will never carry one show up as pending work forever.
     """
     import csv
-    path = os.path.join(PODCASTS, show, "manifest.csv")
+    path = archive.manifest(show)
     status = {}
     if not os.path.isfile(path):
         return status
@@ -94,51 +83,52 @@ def manifest_status(show):
 
 
 def report(show):
-    cfg_path = os.path.join(PODCASTS, show, "podcast.json")
-    with open(cfg_path, encoding="utf-8") as f:
-        cfg = json.load(f)
-    episodes_dir = os.path.join(PODCASTS, show, "episodes")
+    cfg = archive.load(show)
+    kind = archive.kind(cfg)
+    items_dir = archive.items_dir(show, cfg)
+    doc = kind["document"]
 
     print(f"\n=== {cfg.get('display_name', show)} ({show}) ===")
 
-    live = published_urls(cfg)
-    have = saved_urls(episodes_dir)
+    live = published_urls(show)
+    have = saved_urls(items_dir, kind["source_file"])
     seen = manifest_status(show)
-    no_transcript = [u for u in live
-                     if u not in have and seen.get(u) == "no transcript"]
-    unscraped = [u for u in live if u not in have and u not in no_transcript]
+    missing = [u for u in live
+               if u not in have and seen.get(u) == "no " + doc]
+    unscraped = [u for u in live if u not in have and u not in missing]
 
-    folders = sorted(os.listdir(episodes_dir)) if os.path.isdir(episodes_dir) else []
+    folders = archive.item_folders(show, cfg)
     noteless = [d for d in folders
-                if os.path.isfile(os.path.join(episodes_dir, d, "transcript.md"))
-                and not os.path.isfile(os.path.join(episodes_dir, d, "note.md"))]
+                if os.path.isfile(
+                    os.path.join(items_dir, d, kind["source_file"]))
+                and not os.path.isfile(os.path.join(items_dir, d, "note.md"))]
 
-    print(f"  published on site   {len(live)}")
-    print(f"  transcripts on disk {len(have)}")
-    print(f"  notes written       {len(have) - len(noteless)}")
+    print(f"  published on site    {len(live)}")
+    print(f"  {kind['documents'] + ' on disk':<20} {len(have)}")
+    print(f"  notes written        {len(have) - len(noteless)}")
 
-    if no_transcript:
-        print(f"  no transcript published {len(no_transcript)} "
+    if missing:
+        print(f"  no {doc} published {len(missing)} "
               "(checked previously; not pending work)")
 
     if unscraped:
-        print(f"\n  {len(unscraped)} episode(s) not yet scraped:")
+        print(f"\n  {len(unscraped)} {kind['item']}(s) not yet scraped:")
         for u in unscraped:
             print(f"    {u}")
         print(f"\n  -> python run.py fetch {show}")
     else:
         print("\n  nothing new to scrape.")
-        if no_transcript:
-            print("     (to retry the no-transcript pages in case the "
+        if missing:
+            print(f"     (to retry the no-{doc} pages in case the "
                   "publisher has since added one:")
             print(f"      python run.py refetch {show})")
 
     if noteless:
-        print(f"\n  {len(noteless)} transcript(s) with no note:")
+        print(f"\n  {len(noteless)} {doc}(s) with no note:")
         for d in noteless:
             print(f"    {d}")
     elif not unscraped:
-        print("  every transcript has a note. Nothing to do.")
+        print(f"  every {doc} has a note. Nothing to do.")
 
     return show, noteless
 
@@ -146,58 +136,80 @@ def report(show):
 BRIEF = """
 --------------------------------------------------------------------------
 Paste the block below into Claude Code to write the missing notes.
-Use a strong model. One agent per three episodes works well; for a single
-episode just run it in the main session.
+Use a strong model. One agent per three {items} works well; for a single
+{item} just run it in the main session.
 --------------------------------------------------------------------------
 
-You are writing episode notes for the {display} archive in this repository.
+You are writing {item} notes for the {display} archive in this repository.
 
 Procedure, in order:
 
 1. Read `docs/NOTE-SPEC.md` in full. It governs everything you write.
-2. Read `podcasts/{show}/SHOW-PROFILE.md` in full. It has this show's
-   disclosure norms, transcript quirks, and reference notes.
+   Its shared rules apply to every source. Read the section called
+   "{section}" twice; it is the half that applies here.
+2. Read `sources/{show}/SOURCE-PROFILE.md` in full. It has this source's
+   disclosure norms, {document} quirks, and reference notes.
 3. Read at least two reference notes named in that profile, including the one
    it calls the benchmark.
-4. For each episode below: read
-   `podcasts/{show}/episodes/<folder>/transcript.md` IN FULL (do not skim, and
-   do not write from the show-notes section), then write
-   `podcasts/{show}/episodes/<folder>/note.md` per the spec.
+4. For each {item} below, read its document IN FULL{skim}, then write its
+   note per the spec:
+     read  sources/{show}/{items_dir}/<folder>/{source_file}
+     write sources/{show}/{items_dir}/<folder>/note.md
 5. Run `python scripts/validate_notes.py {show} <folder> ...` and fix every
    ERROR. The word-count warning is advisory and its text explains when to
    leave it standing.
 
-Episodes:
+{Items}:
 {episodes}
 
 Hard constraints:
-- Create or modify ONLY those `note.md` files. Never touch `transcript.md`,
-  `manifest.csv`, `podcast.json`, the spec, the profile, anything in
-  `scripts/`, or any other episode's files.
-- Single-episode scope: no cross-episode references, no hindsight, no outside
+- Create or modify ONLY those `note.md` files. Never touch `{source_file}`,
+  `manifest.csv`, `source.json`, the spec, the profile, anything in
+  `scripts/`, or any other {item}'s files.
+- Single-{item} scope: no cross-{item} references, no hindsight, no outside
   knowledge used to correct or update a claim.
-- Run verification check 3 (attribution) deliberately on each note: title
-  gravity, the host's framing, and your own compression. Where host and guest
-  diverge, the guest governs. Silence is not agreement.
+- Run verification check 3 (attribution) deliberately on each note.
+{attribution}
 
-Report back, concisely: for each episode the central question and the answer in
-one line each; any hard judgment calls; any garbled or ambiguous transcript
-passages that affected the note; and the final validator output verbatim.
+Report back, concisely: for each {item} the central question and the answer in
+one line each; any hard judgment calls; any garbled or ambiguous passages that
+affected the note; and the final validator output verbatim.
 --------------------------------------------------------------------------
 """
+
+# The attribution check is the one place the two content types genuinely
+# diverge, so each gets its own wording rather than a generic paraphrase that
+# would be accurate for neither.
+ATTRIBUTION = {
+    "podcast": """  Title gravity, the host's framing, and your own compression. Where host
+  and guest diverge, the guest governs. Silence is not agreement.""",
+    "essay": """  Title gravity, quoted voice, and your own compression. A block quote in
+  the document, rendered as a "> " line, is someone else's words and often
+  the author's own earlier position that the surrounding prose goes on to
+  revise. Never attribute a quoted passage to the author of the essay, and
+  never let a revised earlier view stand as the current one.
+- Lines reading `[FIGURE: ...]` mark a chart you cannot see. Where the
+  argument rests on one, say in the note that the evidence is in a figure
+  rather than inferring what it showed.""",
+}
+
+SKIM = {
+    "podcast": ",\n   not skimming and not writing from the show-notes section",
+    "essay": ",\n   not skimming and not writing from the subtitle alone",
+}
 
 
 def main(argv):
     want_brief = "--brief" in argv
     argv = [a for a in argv if not a.startswith("--")]
 
-    known = podcast_names()
+    known = archive.source_names()
     if not known:
-        sys.exit("no podcasts configured under podcasts/")
+        sys.exit("no sources configured under sources/")
     shows = argv or known
     for s in shows:
         if s not in known:
-            sys.exit("unknown podcast %r; known: %s" % (s, ", ".join(known)))
+            sys.exit("unknown source %r; known: %s" % (s, ", ".join(known)))
 
     pending = []
     for show in shows:
@@ -207,12 +219,21 @@ def main(argv):
         for show, noteless in pending:
             if not noteless:
                 continue
-            cfg_path = os.path.join(PODCASTS, show, "podcast.json")
-            with open(cfg_path, encoding="utf-8") as f:
-                cfg = json.load(f)
+            cfg = archive.load(show)
+            kind = archive.kind(cfg)
+            content_type = cfg.get("content_type", archive.DEFAULT_TYPE)
             episodes = "\n".join("- `%s`" % d for d in noteless)
-            print(BRIEF.format(show=show, episodes=episodes,
-                               display=cfg.get("display_name", show)))
+            print(BRIEF.format(
+                show=show, episodes=episodes,
+                display=cfg.get("display_name", show),
+                item=kind["item"], items=kind["items"],
+                Items=kind["items"].capitalize(),
+                items_dir=kind["items_dir"],
+                document=kind["document"],
+                source_file=kind["source_file"],
+                section=kind["spec_section"],
+                skim=SKIM[content_type],
+                attribution=ATTRIBUTION[content_type]))
     elif any(n for _, n in pending):
         print("\nNext: python run.py brief   (prints the note-writing brief)")
     return 0

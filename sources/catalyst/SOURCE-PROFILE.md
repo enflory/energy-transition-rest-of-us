@@ -53,7 +53,7 @@ Not triggers:
 ## Transcript quirks specific to this show
 
 - **The intro bumper is labelled `Tag:`** and matches the speaker-label shape.
-  It is filtered by `podcast.json`, but if one survives, ignore it.
+  It is filtered by `source.json`, but if one survives, ignore it.
 - **Sponsor reads name real companies** (EnergyHub, Bloom, ENGIE and others) and
   read like content. They are filtered before the transcript start is located.
   If any remain, they are not content.

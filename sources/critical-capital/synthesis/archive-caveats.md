@@ -32,7 +32,7 @@ transcript text at all.
 
 Crux, the co-producer, publishes every episode in full at
 crux.com/critical-capital. That is the source of record for this archive, and
-it is why `podcast.json` for this show points at a completely different site
+it is why `source.json` for this show points at a completely different site
 from the Catalyst one.
 
 **The general lesson, which cost an hour to learn:** a show being on a network
@@ -48,7 +48,7 @@ was `what-it-costs-to-make-power-cheap`, published 2026-09-15, which was the
 newest episode and therefore the only one a routine "anything new?" check was
 looking for.
 
-This is why `podcast.json` also walks the show's own paginated listing pages and
+This is why `source.json` also walks the show's own paginated listing pages and
 unions the two sources. A scraper configured only from the sitemap would have
 reported nothing new, indefinitely, for exactly the episode that mattered.
 
@@ -138,4 +138,4 @@ disclosed by the host himself:
 
 His weekly self-identification as Crux's chief executive, and the weekly credits
 thanking the Crux team, are boilerplate and are not disclosures. See
-`SHOW-PROFILE.md` for where the line sits.
+`SOURCE-PROFILE.md` for where the line sits.

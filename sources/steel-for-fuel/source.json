@@ -1,0 +1,52 @@
+{
+  "name": "steel-for-fuel",
+  "display_name": "Steel For Fuel",
+  "publisher": "Substack",
+  "author": "Andy Lubershane",
+
+  "_comment_content_type": "The first non-podcast source in the archive. There are no speaker labels on these pages, so the podcast reader would find no transcript start and record every post as 'no essay'. See docs/ADDING-A-SOURCE.md for what the essay reader does differently.",
+  "content_type": "essay",
+
+  "_comment_where": "Steel For Fuel is Andy Lubershane's own Substack. Unlike Critical Capital, the publisher of the writing and the publisher of the site are the same, so there is only one place to look. Checked on 2026-09-21: payments_state is 'disabled' for this publication and all 57 posts report audience 'everyone', so nothing is paywalled and no session cookie is needed.",
+
+  "_comment_sitemaps": "The sitemap carried all 57 posts on 2026-09-21, exactly matching the archive API. Unusually for this repository, it was complete.",
+  "sitemaps": ["https://steelforfuel.substack.com/sitemap.xml"],
+
+  "_comment_index_pages": "Read anyway, for the one failure that matters: a sitemap that lags by exactly the newest post. Substack's archive page loads by script, so its listing is not in the HTML; the JSON archive endpoint is the listing, and one request for the 12 newest covers the freshness gap at negligible cost.\n\nDo NOT raise the limit to catch up an empty archive. A limit above 30 is silently truncated: limit=50 returns 30 posts and then an EMPTY page at offset=50, so a paging loop stops early and reports 30 of 57 posts with no error at all. The sitemap is the source for bulk discovery; this is only the freshness check.",
+  "index_pages": ["https://steelforfuel.substack.com/api/v1/archive?sort=new&limit=12"],
+  "index_link_pattern": "\"canonical_url\":\"(https://steelforfuel\\.substack\\.com/p/[^\"]+)\"",
+
+  "url_filter": "/p/",
+  "delay_seconds": 1.0,
+
+  "_comment_title_suffix": "Substack is inconsistent here: 25 of the 57 posts end their <title> with ' - by Andy Lubershane', a few of those adding ' - Steel For Fuel', and the other 32 carry the bare title. Left unstripped it lands in the folder name and in the note's title field for some posts and not others. The by-line is matched as a capitalized name of one to three words rather than as Lubershane's name specifically, because guest posts carry the guest's name here instead: 'Full Steam Ahead - by Addison Stark - Steel For Fuel'. An author-specific pattern left that one title, and only that one, with the suffix attached.\n\nNote also that Substack renders the tag as <title data-rh=\"true\">, which is why the scraper's title pattern cannot be anchored on a bare '<title>'.",
+  "title_suffix": "\\s*-\\s*by [A-Z][A-Za-z.'-]+(?: [A-Z][A-Za-z.'-]+){0,2}(?:\\s*-\\s*Steel For Fuel)?\\s*$",
+
+  "_comment_published": "There is no article:published_time meta tag. The date is in the JSON-LD block as datePublished, as a full ISO timestamp.",
+  "published": [
+    {
+      "pattern": "\"datePublished\":\"([0-9T:+-]{19,25})\"",
+      "format": "iso"
+    }
+  ],
+
+  "_comment_content_region": "Substack puts the post body in a div classed 'body markup' and everything after it -- the like and share bar, the comment thread, the recommendations and the footer -- below 'post-footer'. Narrowing to that region takes the page from 78 paragraphs to 38 on the 2026-09-21 post and removes all of the furniture at once. If either anchor stops matching the scraper warns and falls back to the whole page.",
+  "content_start": "class=\"body markup\"",
+  "content_end": "<div class=\"post-footer",
+
+  "_comment_corrections": "Empty, and it should stay empty. These posts are written and edited by their author rather than machine-transcribed, so the class of repeated publisher error that corrections exist for does not arise here.",
+  "corrections": [],
+
+  "_comment_non_speakers": "Unused for an essay: there are no speaker labels to mistake for people.",
+  "non_speakers": [],
+
+  "_comment_boilerplate": "Two kinds of thing. First, the subscribe pitch that Substack templates into the middle or foot of a post. It is the author's own words, but it is site furniture rather than argument.\n\nDeliberately NOT listed: the 'Back to Andy:' marker itself, which is load-bearing. Several posts hand a section to a guest writer, and that phrase is the only thing marking where the guest's voice ends and Lubershane's resumes. Stripping it would leave a guest's conclusions reading as the author's own. See SOURCE-PROFILE.md.\n\nSecond, the placeholder body of the 2023-03-23 post titled 'Coming soon', whose entire content is the sentence 'This is Steel For Fuel.' -- the title is not the body, so the pattern matches the sentence. Removing its only paragraph leaves the page with no prose, so the scraper records it as 'no essay' in the manifest rather than saving a five-word document. That is the correct one of the three states: the page exists and was checked, and it will never carry an essay.",
+  "boilerplate": [
+    "^Hey! Are you enjoying posts like this one from Steel For Fuel\\?",
+    "^Thanks for reading Steel For Fuel",
+    "^Share Steel For Fuel$",
+    "^Leave a comment$",
+    "^Subscribe now$",
+    "^This is Steel For Fuel\\.$"
+  ]
+}

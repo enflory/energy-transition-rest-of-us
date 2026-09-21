@@ -23,7 +23,7 @@ irregular, so do not read the early gaps as a schedule.
 its transcripts. As of 2026-09-18 latitudemedia.com carried 2 of the 12
 episodes as show-notes pages with no transcript text at all. Crux publishes
 every episode in full at crux.com/critical-capital, so that is the source of
-record. `podcast.json` explains the scraping consequences.
+record. `source.json` explains the scraping consequences.
 
 **Format.** Every episode opens the same way: a short clip of the guest, then a
 host monologue stating the episode's premise, then a second guest clip, then

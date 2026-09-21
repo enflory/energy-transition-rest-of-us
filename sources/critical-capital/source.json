@@ -34,7 +34,7 @@
   "_comment_corrections": "Empty, and it should stay empty until a real, repeated publisher error is observed across episodes. A correction edits the source text.",
   "corrections": [],
 
-  "_comment_non_speakers": "The generic set. Note that one episode labels the host's closing voiceover 'ALFRED TRACKING:', a studio direction rather than a name. It is deliberately NOT listed here: it is really Alfred Johnson speaking, and demoting it to unlabelled prose would make it read as a continuation of the guest's last answer. See SHOW-PROFILE.md.",
+  "_comment_non_speakers": "The generic set. Note that one episode labels the host's closing voiceover 'ALFRED TRACKING:', a studio direction rather than a name. It is deliberately NOT listed here: it is really Alfred Johnson speaking, and demoting it to unlabelled prose would make it read as a continuation of the guest's last answer. See SOURCE-PROFILE.md.",
   "non_speakers": [
     "credits", "note", "notes", "correction", "update", "transcript",
     "editor", "disclosure", "listen", "watch", "read", "subscribe"
