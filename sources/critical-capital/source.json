@@ -1,0 +1,48 @@
+{
+  "name": "critical-capital",
+  "display_name": "Critical Capital",
+  "publisher": "Crux and Latitude Studios",
+  "host": "Alfred Johnson",
+
+  "_comment_where": "Critical Capital is a Latitude Media show, but Latitude does not publish its transcripts. As of 2026-09-18 latitudemedia.com carried only 2 of the 12 episodes, both show-notes pages with no transcript at all. Crux, the co-producer, publishes every episode with a full transcript at crux.com/critical-capital, so that is the source of record here.",
+
+  "sitemaps": ["https://www.crux.com/sitemap.xml"],
+
+  "_comment_index_pages": "The sitemap alone is not enough. On 2026-09-18 it listed 11 of the 12 episodes and the one it omitted was the newest, which is the only one a routine check is looking for. Walking the show's own listing pages catches it. Both sources are read and unioned.",
+  "index_pages": ["https://www.crux.com/critical-capital"],
+  "index_link_pattern": "href=\"(/critical-capital/[^\"#?]+)\"",
+  "index_next_pattern": "<a href=\"([^\"]+)\"[^>]*class=\"w-pagination-next",
+
+  "url_filter": "/critical-capital/",
+  "delay_seconds": 1.0,
+
+  "_comment_title_suffix": "Every page title ends with the site name.",
+  "title_suffix": "\\s*\\|\\s*Crux\\s*$",
+
+  "_comment_published": "There is no article:published_time meta tag and no JSON-LD on these pages. The date is rendered as text in the hero, as 'Podcast · Sep 15, 2026'. The same string appears again in the 'More episodes' cards at the foot of the page, so the pattern is anchored to the hero container. If that container is ever renamed the date comes back empty and the folder is named 'undated-...', which is visible rather than silently wrong.",
+  "published": [
+    {
+      "pattern": "podcast-detail-hero-top.*?Podcast\\s*(?:·|&middot;|&#183;)\\s*([A-Z][a-z]{2} \\d{1,2}, \\d{4})",
+      "format": "%b %d, %Y"
+    }
+  ],
+
+  "_comment_content_region": "Webflow puts the navigation menu, an inline CSS block, the host bio, three related-episode cards and the site footer into <p> elements on the same page as the transcript. Narrowing to the region between the 'About the episode' heading and the 'Want to explore more conversations' heading removes all of it in one move, which is more durable than listing each piece as boilerplate. If either anchor stops matching the scraper warns and falls back to the whole page.",
+  "content_start": ">About th(?:e|is) episode\\s*<",
+  "content_end": ">Want to explore more conversations",
+
+  "_comment_corrections": "Empty, and it should stay empty until a real, repeated publisher error is observed across episodes. A correction edits the source text.",
+  "corrections": [],
+
+  "_comment_non_speakers": "The generic set. Note that one episode labels the host's closing voiceover 'ALFRED TRACKING:', a studio direction rather than a name. It is deliberately NOT listed here: it is really Alfred Johnson speaking, and demoting it to unlabelled prose would make it read as a continuation of the guest's last answer. See SOURCE-PROFILE.md.",
+  "non_speakers": [
+    "credits", "note", "notes", "correction", "update", "transcript",
+    "editor", "disclosure", "listen", "watch", "read", "subscribe"
+  ],
+
+  "_comment_boilerplate": "Two items survive the content-region narrowing. {{cta}} is an unrendered Webflow token that leaks through on some episodes; on others the same slot renders as the co-production line. Both are site furniture, not episode content. The spoken credits in the host's outro are left alone, because the host actually says them.",
+  "boilerplate": [
+    "^\\{\\{cta\\}\\}$",
+    "^Critical Capital is a co-production of Crux and Latitude Studios\\. Learn more"
+  ]
+}

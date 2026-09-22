@@ -1,12 +1,15 @@
-# Transcripts are the publisher's copyrighted content, not ours to republish.
-# They are not committed. They regenerate in minutes from the publisher's own
-# site, which also keeps the scraper honest: if it breaks, a fetch reveals it.
+# Source documents are the publisher's copyrighted content, not ours to
+# republish. They are not committed. They regenerate in minutes from the
+# publisher's own site, which also keeps the scraper honest: if it breaks, a
+# fetch reveals it.
 #
 #     python run.py fetch catalyst
+#     python run.py fetch steel-for-fuel
 #
 # Everything derived from them -- the notes, the manifest, the synthesis -- is
 # original work and IS committed.
-podcasts/*/episodes/*/transcript.md
+sources/*/episodes/*/transcript.md
+sources/*/posts/*/essay.md
 
 # Python
 __pycache__/

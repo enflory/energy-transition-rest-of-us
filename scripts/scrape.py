@@ -1,17 +1,28 @@
 #!/usr/bin/env python3
 """
-Scrape podcast episode pages and save their transcripts.
+Scrape published items and save their source documents.
 
 Usage:
-    python scripts/scrape.py <podcast> <episode-url> [<episode-url> ...]
-    python scripts/scrape.py <podcast> --all          # every episode in sitemap
-    python scripts/scrape.py <podcast> --all --force  # re-fetch existing too
+    python scripts/scrape.py <source> <item-url> [<item-url> ...]
+    python scripts/scrape.py <source> --all          # every item discovered
+    python scripts/scrape.py <source> --all --force  # re-fetch existing too
 
-  <podcast> is a directory name under podcasts/, e.g. "catalyst".
-  Its podcast.json supplies where the episodes are listed, how the page
-  stores its title and date, which region of the page holds the content,
-  the known publisher misspellings to correct, and the boilerplate to
-  strip. Nothing show-specific lives in this file.
+  <source> is a directory name under sources/, e.g. "catalyst".
+  Its source.json supplies where the items are listed, how the page stores
+  its title and date, which region of the page holds the content, the known
+  publisher misspellings to correct, and the boilerplate to strip. Nothing
+  source-specific lives in this file.
+
+Two content types, declared by "content_type" in the config:
+
+  podcast (default)  A conversation. The document is a transcript, and it
+                     is found by locating the first paragraph that opens
+                     with a speaker label.
+  essay              A written piece. There are no speaker labels, so the
+                     document is the whole configured content region, and
+                     the structure that carries the argument -- headings,
+                     block quotes, lists and figures -- is preserved
+                     rather than flattened into paragraphs.
 
 A show is not always published by the podcast's own network. Critical
 Capital is a Latitude Media show whose transcripts are published by Crux,
@@ -19,17 +30,18 @@ its co-producer, on an entirely different CMS. Both are read by this one
 script because every difference between them is a line of configuration.
 
 Writes to:
-    podcasts/<podcast>/episodes/<YYYY-MM-DD>-<slug>/transcript.md
-    podcasts/<podcast>/manifest.csv   (one row per episode seen)
+    sources/<source>/<episodes|posts>/<YYYY-MM-DD>-<slug>/<transcript|essay>.md
+    sources/<source>/manifest.csv   (one row per item seen)
 
-Transcripts are stored as published, with two deliberate exceptions, both
+Documents are stored as published, with two deliberate exceptions, both
 recorded in each file's frontmatter:
-  1. HTML markup and entities are normalized to plain text.
+  1. HTML markup and entities are normalized to plain text or Markdown.
   2. Known publisher transcription errors are corrected, per the
-     "corrections" list in podcast.json. Everything else, including guest
-     wording and paragraph breaks, is left exactly as published.
-Sponsor reads, credits and the standard footer bio are separated out of the
-dialogue rather than deleted.
+     "corrections" list in the config. Everything else, including the
+     author's or guest's wording and the paragraph breaks, is left exactly
+     as published.
+Sponsor reads, credits, subscribe widgets and the standard footer bio are
+separated out of the content rather than deleted.
 """
 
 import csv
@@ -43,12 +55,14 @@ import urllib.parse
 import urllib.request
 from datetime import datetime
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PODCASTS = os.path.join(ROOT, "podcasts")
+import archive
 
-# Set by load_config() once the podcast is known. Module-level because the
-# rendering and manifest helpers below are shared across shows.
+ROOT = archive.ROOT
+
+# Set by load_config() once the source is known. Module-level because the
+# rendering and manifest helpers below are shared across sources.
 CFG = {}
+KIND = {}
 OUT_ROOT = ""
 MANIFEST = ""
 SITEMAPS = []
@@ -62,25 +76,22 @@ CONTENT_START = None
 CONTENT_END = None
 
 # The publisher's own default: an ISO timestamp in a WordPress meta tag. Shows
-# hosted elsewhere override this with "published" in podcast.json.
+# hosted elsewhere override this with "published" in source.json.
 DEFAULT_PUBLISHED = [{
     "pattern": r'<meta property="article:published_time" content="([^"]+)"',
     "format": "iso",
 }]
 
 
-def load_config(podcast):
-    """Read podcasts/<podcast>/podcast.json and populate module state."""
-    global CFG, OUT_ROOT, MANIFEST, SITEMAPS, CORRECTIONS, BOILERPLATE
+def load_config(source):
+    """Read sources/<source>/source.json and populate module state."""
+    global CFG, KIND, OUT_ROOT, MANIFEST, SITEMAPS, CORRECTIONS, BOILERPLATE
     global NON_SPEAKERS, DELAY_SECONDS, TITLE_SUFFIX, PUBLISHED
     global CONTENT_START, CONTENT_END
-    path = os.path.join(PODCASTS, podcast, "podcast.json")
-    if not os.path.isfile(path):
-        sys.exit("no config at %s (see docs/ADDING-A-PODCAST.md)" % path)
-    with open(path, encoding="utf-8") as f:
-        CFG = json.load(f)
-    OUT_ROOT = os.path.join(PODCASTS, podcast, "episodes")
-    MANIFEST = os.path.join(PODCASTS, podcast, "manifest.csv")
+    CFG = archive.load(source)
+    KIND = archive.kind(CFG)
+    OUT_ROOT = archive.items_dir(source, CFG)
+    MANIFEST = archive.manifest(source)
     SITEMAPS = CFG.get("sitemaps", [])
     DELAY_SECONDS = CFG.get("delay_seconds", 1.0)
     NON_SPEAKERS = {s.lower() for s in CFG.get("non_speakers", [])}
@@ -102,7 +113,7 @@ UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
 
 # A transcript paragraph opens with a speaker label, e.g. "Jane Doe:".
 # This shape is shared across shows; everything else show-specific is in
-# podcast.json.
+# source.json.
 SPEAKER_RE = re.compile(r"^([A-Z][A-Za-z.\-']*(?: [A-Z][A-Za-z.\-']*){0,3}):\s")
 
 # Zero-width characters. Some CMSes emit these ahead of a speaker label, which
@@ -196,7 +207,7 @@ def index_urls():
     if not CFG.get("index_link_pattern"):
         sys.exit("index_pages is set but index_link_pattern is not; the "
                  "scraper cannot tell which links on the page are episodes "
-                 "(see docs/ADDING-A-PODCAST.md)")
+                 "(see docs/ADDING-A-SOURCE.md)")
     link_re = re.compile(CFG["index_link_pattern"])
     next_re = (re.compile(CFG["index_next_pattern"])
                if CFG.get("index_next_pattern") else None)
@@ -267,8 +278,16 @@ def content_region(page):
 
 
 def parse(page, url):
-    tally = {}
-    title = clean(meta(r"<title>(.*?)</title>", page)) or "Untitled"
+    """Dispatch to the reader for this source's content type."""
+    return (parse_essay if KIND.get("items_dir") == "posts"
+            else parse_transcript)(page, url)
+
+
+def common_fields(page, url, tally):
+    """The metadata every content type records, however it is published."""
+    # The title tag is not always bare: Substack renders <title data-rh="true">,
+    # and a pattern anchored on "<title>" silently titled every post "Untitled".
+    title = clean(meta(r"<title[^>]*>(.*?)</title>", page)) or "Untitled"
     if TITLE_SUFFIX:
         title = TITLE_SUFFIX.sub("", title)
 
@@ -291,8 +310,16 @@ def parse(page, url):
         except json.JSONDecodeError:
             continue
         for node in data.get("@graph", [data]):
-            if node.get("@type") == "NewsArticle":
+            if node.get("@type") in ("NewsArticle", "Article", "BlogPosting"):
                 ep["keywords"] = node.get("keywords") or ep["keywords"]
+
+    return ep
+
+
+def parse_transcript(page, url):
+    """Read a conversation: dialogue located by its speaker labels."""
+    tally = {}
+    ep = common_fields(page, url, tally)
 
     body = content_region(page)
     paras = [clean(p) for p in re.findall(r"<p[^>]*>(.*?)</p>", body, re.S)]
@@ -309,11 +336,122 @@ def parse(page, url):
     ep["show_notes"] = [apply_corrections(p, tally) for p in content[:start]]
     ep["topics"] = [apply_corrections(t, tally) for t in topic_bullets(page)]
     ep["transcript"] = [apply_corrections(p, tally) for p in content[start:]]
-    ep["transcript_word_count"] = sum(len(p.split()) for p in ep["transcript"])
+    ep["word_count"] = sum(len(p.split()) for p in ep["transcript"])
     ep["speakers"] = sorted({SPEAKER_RE.match(p).group(1)
                              for p in ep["transcript"] if is_dialogue(p)})
     ep["corrections"] = tally
     return ep
+
+
+# Block-level elements that carry an essay's argument. Everything else in the
+# content region is styling.
+BLOCK_RE = re.compile(r"<(p|h[1-6]|li)\b[^>]*>(.*?)</\1>", re.S | re.I)
+FIGURE_RE = re.compile(r"<figure\b[^>]*>(.*?)</figure>", re.S | re.I)
+QUOTE_RE = re.compile(r"<blockquote\b[^>]*>(.*?)</blockquote>", re.S | re.I)
+
+# Substack proxies images through its CDN, wrapping the original URL as an
+# encoded path segment. The original is shorter and outlives the proxy.
+CDN_RE = re.compile(r"/(https%3A%2F%2F[^\"'\s]+)")
+
+
+def figure_parts(inner):
+    """The caption and image URL of one <figure>, either of which may be ''."""
+    caption = clean(meta(r"<figcaption[^>]*>(.*?)</figcaption>", inner))
+    if not caption:
+        caption = clean(meta(r"<img[^>]*\salt=\"([^\"]*)\"", inner))
+    url = (meta(r"<a[^>]*\shref=\"(https?://[^\"]+)\"", inner)
+           or meta(r"<img[^>]*\ssrc=\"(https?://[^\"]+)\"", inner))
+    m = CDN_RE.search(url)
+    if m:
+        url = urllib.parse.unquote(m.group(1))
+    return caption, url
+
+
+def spans(pattern, segment):
+    return [(m.start(), m.end()) for m in pattern.finditer(segment)]
+
+
+def inside(pos, ranges):
+    return any(a <= pos < b for a, b in ranges)
+
+
+def blocks(segment):
+    """The content region as ordered blocks, keeping the structure intact.
+
+    An essay argues through its structure. A block quote is someone else's
+    words, a heading marks where the argument turns, and a figure is often
+    the evidence for the sentence before it. Flattening all of that into a
+    list of paragraphs, which is all a transcript needs, would hand the
+    note-writer an essay whose quotations read as the author's own claims.
+    """
+    figures = spans(FIGURE_RE, segment)
+    quotes = spans(QUOTE_RE, segment)
+
+    found = []
+    for m in FIGURE_RE.finditer(segment):
+        caption, url = figure_parts(m.group(1))
+        found.append((m.start(), {"kind": "figure", "text": caption,
+                                  "url": url}))
+    for m in BLOCK_RE.finditer(segment):
+        # A figcaption lives inside <figure> and is emitted with it; a <p>
+        # inside one is the caption again by another name.
+        if inside(m.start(), figures):
+            continue
+        text = clean(m.group(2))
+        if not text or is_boilerplate(text):
+            continue
+        tag = m.group(1).lower()
+        if tag.startswith("h"):
+            found.append((m.start(), {"kind": "heading", "text": text,
+                                      "level": int(tag[1])}))
+        else:
+            found.append((m.start(), {
+                "kind": "quote" if inside(m.start(), quotes) else
+                        ("item" if tag == "li" else "para"),
+                "text": text}))
+
+    return [b for _, b in sorted(found, key=lambda pair: pair[0])]
+
+
+def parse_essay(page, url):
+    """Read a written piece: the content region is the document."""
+    tally = {}
+    ep = common_fields(page, url, tally)
+
+    body = blocks(content_region(page))
+    if not any(b["kind"] in ("para", "quote") for b in body):
+        return None  # page carries no prose; a stub or a landing page
+
+    for b in body:
+        b["text"] = apply_corrections(b["text"], tally)
+
+    ep["blocks"] = body
+    ep["word_count"] = sum(len(b["text"].split()) for b in body
+                           if b["kind"] != "figure")
+    ep["figure_count"] = sum(1 for b in body if b["kind"] == "figure")
+    ep["quoted_paragraphs"] = sum(1 for b in body if b["kind"] == "quote")
+    ep["author"] = apply_corrections(author(page) or CFG.get("author", ""),
+                                     tally)
+    ep["corrections"] = tally
+    return ep
+
+
+def author(page):
+    """The by-line, however this publisher stores it."""
+    for blob in re.findall(
+            r'<script type="application/ld\+json"[^>]*>(.*?)</script>',
+            page, re.S):
+        try:
+            data = json.loads(blob)
+        except json.JSONDecodeError:
+            continue
+        for node in data.get("@graph", [data]):
+            person = node.get("author")
+            if isinstance(person, list):
+                person = person[0] if person else None
+            if isinstance(person, dict) and person.get("name"):
+                return clean(person["name"])
+    return clean(meta(r'<meta name="author" content="([^"]+)"', page))
 
 
 def slugify(text):
@@ -330,18 +468,21 @@ def q(v):
     return json.dumps(str(v), ensure_ascii=False)
 
 
-def render(ep):
+def frontmatter(ep, extra):
+    """The header both content types share, plus the fields only one has."""
     out = ["---"]
     for key in ("title", "url", "published", "modified", "megaphone_id"):
-        out.append(f"{key}: {q(ep[key])}")
+        if ep.get(key) or key in ("title", "url", "published"):
+            out.append(f"{key}: {q(ep.get(key, ''))}")
     out.append("keywords: [" + ", ".join(q(k) for k in ep["keywords"]) + "]")
-    out.append("speakers: [" + ", ".join(q(s) for s in ep["speakers"]) + "]")
-    out.append(f"transcript_word_count: {ep['transcript_word_count']}")
+    out += extra
     out.append("scraped_at: " + q(
         datetime.now().astimezone().isoformat(timespec="seconds")))
     out.append("source: " + q("%s - %s" % (CFG.get("publisher", ""),
                                             CFG.get("display_name", ""))))
-    out.append("podcast: " + q(CFG.get("name", "")))
+    out.append("source_name: " + q(CFG.get("name", "")))
+    out.append("content_type: " + q(CFG.get("content_type",
+                                            archive.DEFAULT_TYPE)))
     if ep["corrections"]:
         out.append("corrections:")
         for note, n in sorted(ep["corrections"].items()):
@@ -349,6 +490,19 @@ def render(ep):
     else:
         out.append("corrections: []")
     out.append("---")
+    return out
+
+
+def render(ep):
+    return (render_essay if KIND.get("items_dir") == "posts"
+            else render_transcript)(ep)
+
+
+def render_transcript(ep):
+    out = frontmatter(ep, [
+        "speakers: [" + ", ".join(q(s) for s in ep["speakers"]) + "]",
+        f"word_count: {ep['word_count']}",
+    ])
     out += ["", f"# {ep['title']}", ""]
 
     if ep["show_notes"]:
@@ -368,10 +522,46 @@ def render(ep):
     return "\n".join(out).rstrip() + "\n"
 
 
+def render_essay(ep):
+    """Markdown that keeps the author's voice separable from everyone else's.
+
+    Block quotes stay quoted, because the most likely way to misread an essay
+    is to attribute a quoted passage to the person quoting it. Figures are
+    emitted as a visible marker rather than dropped: the argument often rests
+    on a chart, and a note-writer reading only the prose needs to know that
+    something load-bearing is missing rather than infer its absence.
+    """
+    out = frontmatter(ep, [
+        "author: " + q(ep["author"]),
+        f"word_count: {ep['word_count']}",
+        f"figure_count: {ep['figure_count']}",
+        f"quoted_paragraphs: {ep['quoted_paragraphs']}",
+    ])
+    out += ["", f"# {ep['title']}", "", "## Essay", ""]
+
+    for b in ep["blocks"]:
+        if b["kind"] == "heading":
+            # Clamped to sit under the "## Essay" heading without running to
+            # ###### the moment a publisher's body starts at <h4>, which
+            # Substack's does.
+            out += ["#" * min(5, max(3, b["level"])) + " " + b["text"], ""]
+        elif b["kind"] == "quote":
+            out += ["> " + b["text"], ""]
+        elif b["kind"] == "item":
+            out += ["- " + b["text"], ""]
+        elif b["kind"] == "figure":
+            label = b["text"] or "no caption in source"
+            out += [f"[FIGURE: {label}]" + (f" {b['url']}" if b["url"] else ""),
+                    ""]
+        else:
+            out += [b["text"], ""]
+    return "\n".join(out).rstrip() + "\n"
+
+
 def save(ep):
     d = os.path.join(OUT_ROOT, folder_name(ep))
     os.makedirs(d, exist_ok=True)
-    path = os.path.join(d, "transcript.md")
+    path = os.path.join(d, KIND["source_file"])
     with open(path, "w", encoding="utf-8", newline="\n") as f:
         f.write(render(ep))
     return path
@@ -383,7 +573,7 @@ def saved_urls():
     if not os.path.isdir(OUT_ROOT):
         return found
     for name in os.listdir(OUT_ROOT):
-        p = os.path.join(OUT_ROOT, name, "transcript.md")
+        p = os.path.join(OUT_ROOT, name, KIND["source_file"])
         if os.path.isfile(p):
             with open(p, encoding="utf-8") as f:
                 head = f.read(2000)
@@ -394,12 +584,12 @@ def saved_urls():
 
 
 def rows_from_disk():
-    """Reconstruct rows for saved episodes by reading the archive itself."""
+    """Reconstruct rows for saved items by reading the archive itself."""
     found = {}
     if not os.path.isdir(OUT_ROOT):
         return found
     for name in sorted(os.listdir(OUT_ROOT)):
-        p = os.path.join(OUT_ROOT, name, "transcript.md")
+        p = os.path.join(OUT_ROOT, name, KIND["source_file"])
         if not os.path.isfile(p):
             continue
         with open(p, encoding="utf-8") as f:
@@ -409,7 +599,11 @@ def rows_from_disk():
             m = re.search(r'^%s: "([^"]*)"' % key, head, re.M)
             return m.group(1) if m else ""
 
-        wc = re.search(r"^transcript_word_count: (\d+)", head, re.M)
+        # Documents scraped before the two content types were unified spell
+        # this "transcript_word_count". They regenerate on the next fetch;
+        # reading both means an existing archive does not have to be rebuilt
+        # just to produce a correct manifest.
+        wc = re.search(r"^(?:transcript_)?word_count: (\d+)", head, re.M)
         url = field("url")
         if url:
             found[url] = [field("published")[:10], field("title"), "saved",
@@ -449,8 +643,8 @@ def write_manifest(rows):
 def main(argv):
     if not argv or argv[0].startswith("--"):
         sys.exit(__doc__)
-    podcast = argv[0]
-    load_config(podcast)
+    source = argv[0]
+    load_config(source)
     argv = argv[1:]
 
     force = "--force" in argv
@@ -458,11 +652,15 @@ def main(argv):
     urls = episode_urls() if "--all" in argv else args
     if not urls:
         sys.exit(__doc__)
-    print(f"{CFG.get('display_name', podcast)}")
+    print(f"{CFG.get('display_name', source)}")
 
-    print(f"{len(urls)} episode URLs to process\n")
-    rows, counts = [], {"saved": 0, "skipped": 0, "no transcript": 0,
-                        "error": 0}
+    # The middle state of the three: seen, but the publisher ships no document
+    # for it. Catalyst's committed manifest spells it "no transcript", so the
+    # wording is per content type rather than changed under the existing rows.
+    missing = "no " + KIND["document"]
+
+    print(f"{len(urls)} {KIND['item']} URLs to process\n")
+    rows, counts = [], {"saved": 0, "skipped": 0, missing: 0, "error": 0}
     have = set() if force else saved_urls()
 
     for i, url in enumerate(urls, 1):
@@ -484,16 +682,16 @@ def main(argv):
 
         if ep is None:
             date = published_date(page)[:10]
-            counts["no transcript"] += 1
-            rows.append([date, slug, "no transcript", "", "", url])
-            print(f"[{i:>3}/{len(urls)}] NONE   no transcript  {slug[:60]}")
+            counts[missing] += 1
+            rows.append([date, slug, missing, "", "", url])
+            print(f"[{i:>3}/{len(urls)}] NONE   {missing:<14} {slug[:60]}")
         else:
             save(ep)
             counts["saved"] += 1
             rows.append([ep["published"][:10], ep["title"], "saved",
-                         ep["transcript_word_count"], folder_name(ep), url])
+                         ep["word_count"], folder_name(ep), url])
             print(f"[{i:>3}/{len(urls)}] OK     "
-                  f"{ep['transcript_word_count']:>6,}w  {folder_name(ep)[:70]}")
+                  f"{ep['word_count']:>6,}w  {folder_name(ep)[:70]}")
         time.sleep(DELAY_SECONDS)
 
     write_manifest(rows)

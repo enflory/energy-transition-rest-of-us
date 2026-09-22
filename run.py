@@ -2,16 +2,18 @@
 """
 Task runner for this repository.
 
-    python run.py                     what needs doing right now
-    python run.py brief    [show]     print the note-writing brief to paste
-    python run.py fetch     <show>    scrape episodes that are not saved yet
-    python run.py refetch   <show>    re-scrape everything, including saved
-    python run.py validate [show]     structural check on every note
-    python run.py dedupe   [show]     find republished episodes
-    python run.py stats    [show]     archive size and coverage
-    python run.py shows               list configured podcasts
+    python run.py                       what needs doing right now
+    python run.py brief    [source]     print the note-writing brief to paste
+    python run.py fetch     <source>    scrape items that are not saved yet
+    python run.py refetch   <source>    re-scrape everything, including saved
+    python run.py validate [source]     structural check on every note
+    python run.py dedupe   [source]     find republished items
+    python run.py stats    [source]     archive size and coverage
+    python run.py sources               list configured sources
 
-`show` is a directory name under podcasts/, e.g. catalyst.
+`source` is a directory name under sources/, e.g. catalyst or steel-for-fuel.
+A source is a podcast or a newsletter; `content_type` in its source.json says
+which, and everything downstream follows from that.
 
 There is deliberately no Makefile: make is not installed by default on
 Windows, and this repository is maintained from a Windows machine. Python is
@@ -32,16 +34,15 @@ def script(name, *args):
 
 
 def shows():
-    base = os.path.join(ROOT, "podcasts")
-    if not os.path.isdir(base):
-        return []
-    return sorted(d for d in os.listdir(base)
-                  if os.path.isfile(os.path.join(base, d, "podcast.json")))
+    sys.path.insert(0, os.path.join(ROOT, "scripts"))
+    import archive
+    return archive.source_names()
 
 
 def need_show(args, command):
     if not args:
-        sys.exit(f"'{command}' needs a show. Configured: {', '.join(shows())}")
+        sys.exit(f"'{command}' needs a source. "
+                 f"Configured: {', '.join(shows())}")
     return args[0]
 
 
@@ -53,7 +54,7 @@ def main(argv):
         print(__doc__)
         return 0
 
-    if command == "shows":
+    if command in ("sources", "shows"):
         for s in shows():
             print(s)
         return 0

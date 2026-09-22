@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Find republished episodes: two folders holding the same conversation.
+Find republished items: two folders holding the same conversation or essay.
 
 Usage:
-    python scripts/dedupe_check.py            # every podcast
-    python scripts/dedupe_check.py catalyst   # one podcast
+    python scripts/dedupe_check.py            # every source
+    python scripts/dedupe_check.py catalyst   # one source
 
 Why this exists: publishers rerun episodes. The Catalyst archive contains two
 folders, eleven months apart with different slugs, that hold the same interview
@@ -12,7 +12,13 @@ with the same guest. Nothing about the filenames or the frontmatter reveals it.
 Any count of episodes, and any thread-frequency tally, silently double-counts
 that conversation unless someone knows.
 
-Method: compare 5-gram sets of the transcript body with frontmatter stripped,
+A newsletter has the same failure mode from a different cause. Steel For Fuel
+published "For AI, energy is nothing, and energy is everything" and, two years
+later, a piece under the same title marked "(reprise)". Those two share no
+identical paragraph, so they are genuinely separate pieces and this check
+correctly leaves them alone, but the titles alone cannot tell you that.
+
+Method: compare 5-gram sets of the document body with frontmatter stripped,
 scoring by containment rather than Jaccard, so a short episode nested inside a
 longer one is still caught.
 
@@ -31,8 +37,9 @@ import os
 import re
 import sys
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PODCASTS = os.path.join(ROOT, "podcasts")
+import archive
+
+ROOT = archive.ROOT
 
 THRESHOLD = 0.25   # containment above this is worth a human look
 
@@ -44,24 +51,19 @@ def shingles(path):
     return set(zip(words, words[1:], words[2:], words[3:], words[4:]))
 
 
-def podcast_names():
-    if not os.path.isdir(PODCASTS):
-        return []
-    return sorted(d for d in os.listdir(PODCASTS)
-                  if os.path.isfile(os.path.join(PODCASTS, d, "podcast.json")))
-
-
 def scan(show):
-    episodes_dir = os.path.join(PODCASTS, show, "episodes")
-    if not os.path.isdir(episodes_dir):
+    cfg = archive.load(show)
+    kind = archive.kind(cfg)
+    items_dir = archive.items_dir(show, cfg)
+    if not os.path.isdir(items_dir):
         return []
 
     docs = {}
-    for folder in sorted(os.listdir(episodes_dir)):
-        path = os.path.join(episodes_dir, folder, "transcript.md")
-        if os.path.isfile(path):
+    for folder in archive.item_folders(show, cfg):
+        path = archive.any_source_doc(os.path.join(items_dir, folder))
+        if path:
             docs[folder] = shingles(path)
-    print(f"{show}: {len(docs)} transcripts compared")
+    print(f"{show}: {len(docs)} {kind['documents']} compared")
     if len(docs) < 2:
         return []
 
@@ -82,13 +84,13 @@ def scan(show):
 
 
 def main(argv):
-    known = podcast_names()
+    known = archive.source_names()
     if not known:
-        sys.exit("no podcasts configured under podcasts/")
+        sys.exit("no sources configured under sources/")
     shows = argv or known
     for s in shows:
         if s not in known:
-            sys.exit("unknown podcast %r; known: %s" % (s, ", ".join(known)))
+            sys.exit("unknown source %r; known: %s" % (s, ", ".join(known)))
 
     hits = []
     for show in shows:
