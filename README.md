@@ -32,24 +32,23 @@ specification that makes the failure modes explicit and testable.
 
 ## What is in it
 
-As of 2026-09-21:
+As of 2026-09-22:
 
 | | Catalyst | Critical Capital | Steel For Fuel | Total |
 |---|---|---|---|---|
 | Content type | podcast | podcast | essay | |
-| Items with notes | 125 | 11 | 2 | **138** |
-| Items awaiting notes | 0 | 0 | 54 | **54** |
-| Note text | ~255,000 words | ~25,000 words | ~1,300 words | **~281,000 words** |
-| Median note | 1,998 words | 2,254 words | n/a | |
+| Items with notes | 125 | 11 | 56 | **192** |
+| Items awaiting notes | 0 | 0 | 0 | **0** |
+| Note text | ~255,000 words | ~25,000 words | ~78,000 words | **~358,000 words** |
+| Median note | 1,998 words | 2,254 words | 1,560 words | |
 | Span | 2022-11 to 2026-09 | 2026-04 to 2026-09 | 2023-03 to 2026-09 | |
 
-Steel For Fuel was added on 2026-09-21. Its 56 essays are fetched and two
-reference notes are hand-written; the remaining 54 notes are not yet written.
-Note-length figures are not comparable across content types, because essay
-notes are sized against their source.
+Every transcript and essay the publishers have released has a note. Note lengths are not comparable across content types, because essay notes
+are sized against their source: Steel For Fuel's range from about 400 to 2,500
+words.
 
-Counted as conversations rather than episodes the total is 135: one Catalyst
-episode is published twice, eleven months apart under different titles.
+Counted as unique conversations and essays rather than items, the total is 191:
+one Catalyst episode is published twice, eleven months apart under different titles.
 
 ---
 
@@ -104,7 +103,7 @@ sources/
       hindsight-seeds.md    cross-item threads, for later writing
       archive-caveats.md    data-quality facts about the corpus itself
   critical-capital/     same layout, 11 notes
-  steel-for-fuel/               an essay source
+  steel-for-fuel/               an essay source, 56 notes
     source.json         content_type: essay
     posts/
       2026-09-21-for-ai-energy-is-nothing-and-energy-is-everything-reprise/
@@ -118,8 +117,8 @@ scripts/
 run.py                  task runner
 ```
 
-Show-specific facts live in `source.json` and `SOURCE-PROFILE.md`. Nothing about
-any particular podcast is hard-coded into the scripts or the spec, which is
+Source-specific facts live in `source.json` and `SOURCE-PROFILE.md`. Nothing about
+any particular source is hard-coded into the scripts or the spec, which is
 what makes adding a second show cheap.
 
 The second show tested that claim harder than expected. Critical Capital is a
@@ -251,9 +250,18 @@ guest's; eleven named companies and agencies erased from a single note,
 including from its most citable claim; and a date imported from a different
 episode's transcript into the very bullet flagging a dating problem.
 
+A third pass, over the 54 Steel For Fuel notes, made 195 corrections. The worst
+was a note whose answer inverted its essay's conclusion: the post argues that
+without a paradigm shift, human-level AI would probably break the energy system,
+and the note answered "probably not". Others included a definition that made its
+own post incoherent, a drawback the essay listed among its reasons for
+excitement recorded as a limitation, and three true facts imported from outside
+the document.
+
 **Verification is done by an agent that did not write the note.** That is the
-part that matters. In both rounds the writers had reviewed their own work and
-reported it clean, and every error above survived that review.
+part that matters. In the first two rounds the writers had reviewed their own
+work and reported it clean, and every error found in those rounds survived that
+review.
 
 ---
 
@@ -276,7 +284,7 @@ parallel. Material that spans episodes lives in `synthesis/`.
 
 ## Caveats worth knowing
 
-Recorded in full in each show's `synthesis/archive-caveats.md`. The three that
+Recorded in full in each source's `synthesis/archive-caveats.md`. The ones that
 would bite a careless reader:
 
 - **One Catalyst episode is published twice**, eleven months apart under
