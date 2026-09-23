@@ -11,6 +11,10 @@ It is both an archive and a pipeline. The notes are the product. The scripts,
 the specification and the verification process are here so that the notes are
 reproducible rather than merely asserted.
 
+**Read them at [energy.lonelymtnlabs.com](https://energy.lonelymtnlabs.com)**,
+which is built from this repository on every push to `main`. Browse by source,
+by episode, or by thread, or search all of them at once.
+
 ---
 
 ## Why
@@ -114,6 +118,11 @@ scripts/
   scrape.py             fetch and parse, both content types
   validate_notes.py     structural check
   dedupe_check.py  stats.py  new_episodes.py
+reader/
+  build.py              builds the reading site from the notes (stdlib only)
+  static/               its stylesheet, script and icon
+.github/workflows/
+  reader.yml            publishes the site to GitHub Pages on push to main
 run.py                  task runner
 ```
 
