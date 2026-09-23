@@ -96,9 +96,15 @@ python run.py fetch <source>     # scrape missing items
 python run.py validate [source]  # structural check
 python run.py dedupe [source]    # find republished items
 python run.py stats [source]     # archive size and coverage
+python reader/build.py --serve   # build the reading site, serve it on :8000
 ```
 
 Run `validate` before reporting a note as finished, and fix every ERROR.
+
+The reading site in `reader/` is built from the notes as they are. It never
+changes a note, and it fails loudly if a note is not in the shape the spec
+requires, so a build failure after a note lands means the note needs fixing,
+not the builder.
 
 ---
 

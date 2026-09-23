@@ -29,3 +29,6 @@ Thumbs.db
 *.log
 tmp/
 scratch/
+
+# Reader site build output (python reader/build.py)
+reader/_build/
