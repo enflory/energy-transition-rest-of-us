@@ -37,6 +37,9 @@ body {
   font-optical-sizing: auto;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  /* Notes contain long unbroken runs like "engineering/procurement/construction"
+     that are wider than a small phone. Let them break rather than scroll. */
+  overflow-wrap: break-word;
 }
 
 a { color: inherit; }
@@ -103,6 +106,9 @@ a { color: inherit; }
     mask-image: linear-gradient(90deg, #000 85%, transparent);
   }
   .nav::-webkit-scrollbar { display: none; }
+  .nav a { padding: 12px 0; }
+  .chips li a { padding: 9px 11px; }
+  .index-letter a { padding: 9px 0; }
 }
 
 main { display: block; min-height: 60vh; }
@@ -154,8 +160,10 @@ main { display: block; min-height: 60vh; }
   padding: 18px 8px 18px 0; text-decoration: none; position: relative;
   transition: background-color .25s, padding-left .25s;
 }
-.row a:hover { background: var(--card); padding-left: 10px; }
-.row a:hover .row-title { color: var(--ember); }
+@media (hover: hover) {
+  .row a:hover { background: var(--card); padding-left: 10px; }
+  .row a:hover .row-title { color: var(--ember); }
+}
 .row-date { color: var(--muted); padding-top: 6px; }
 .row-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .row-title { font-size: 21px; line-height: 1.25; font-weight: 500; letter-spacing: -0.01em; transition: color .2s; text-wrap: pretty; }
@@ -245,7 +253,7 @@ mark { background: #9c6b3a26; color: inherit; padding: 0 1px; }
   background: var(--card); border: 1px solid var(--rule); border-radius: 2px; padding: 26px 28px 22px;
   transition: transform .4s cubic-bezier(.2,.8,.2,1), box-shadow .4s, border-color .4s;
 }
-.source-card:hover { transform: translateY(-3px); box-shadow: 0 14px 30px -12px rgba(28,29,26,.18); border-color: #9c6b3a66; }
+@media (hover: hover) { .source-card:hover { transform: translateY(-3px); box-shadow: 0 14px 30px -12px rgba(28,29,26,.18); border-color: #9c6b3a66; } }
 .source-card .kicker { margin-bottom: 8px; }
 .source-name { font-size: 30px; font-weight: 500; line-height: 1.05; letter-spacing: -0.015em; }
 .source-person { font-style: italic; color: var(--ink-2); font-size: 17px; }
