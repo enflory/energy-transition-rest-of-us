@@ -56,13 +56,14 @@ from agent reports:
 treat any claim that appears only there as unverified. Several are demonstrably
 wrong, not merely promotional.
 
-## One true duplicate: the archive holds 124 unique conversations, not 125
+## One true duplicate: the archive holds one fewer unique conversation than episodes
 
 `2023-11-16-the-cost-of-nuclear` and `2024-08-15-the-cost-of-nuclear` are the
 same conversation with the same guest (Jessica Lovering). The 2024 source URL
 ends in `-2`, and Kann says inside the 2024 transcript "we're at the end of
-2023." A 5-gram containment scan over all 125 transcripts puts the overlap at
-99% and finds **no other near-duplicate pair**, so this is the only one.
+2023." A 5-gram containment scan over the 125 transcripts held before
+2026-09-24 puts the overlap at 99% and finds **no other near-duplicate pair**,
+so this is the only one. The scan has not been rerun since.
 
 Both notes were written independently and both are kept. They are not
 redundant: the 2024 note deliberately carries material the 2023 note does not

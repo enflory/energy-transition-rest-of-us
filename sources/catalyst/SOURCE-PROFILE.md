@@ -12,7 +12,7 @@ published by Latitude Media and hosted by Shayle Kann, a partner at Energy
 Impact Partners (EIP). Episodes are usually a single long interview with one
 guest, opened by a host monologue that states the episode's question.
 
-The archive here holds 125 transcripts spanning 2022-11 to 2026-09.
+The archive here holds 126 transcripts spanning 2022-11 to 2026-09.
 
 **Format note that matters for note-writing.** Kann structures most episodes
 around one central question and pushes back on his guests. That makes the

@@ -36,14 +36,14 @@ specification that makes the failure modes explicit and testable.
 
 ## What is in it
 
-As of 2026-09-22:
+As of 2026-09-24:
 
 | | Catalyst | Critical Capital | Steel For Fuel | Total |
 |---|---|---|---|---|
 | Content type | podcast | podcast | essay | |
-| Items with notes | 125 | 11 | 56 | **192** |
+| Items with notes | 126 | 11 | 56 | **193** |
 | Items awaiting notes | 0 | 0 | 0 | **0** |
-| Note text | ~255,000 words | ~25,000 words | ~78,000 words | **~358,000 words** |
+| Note text | ~256,000 words | ~25,000 words | ~78,000 words | **~359,000 words** |
 | Median note | 1,998 words | 2,254 words | 1,560 words | |
 | Span | 2022-11 to 2026-09 | 2026-04 to 2026-09 | 2023-03 to 2026-09 | |
 
@@ -51,7 +51,7 @@ Every transcript and essay the publishers have released has a note. Note lengths
 are sized against their source: Steel For Fuel's range from about 400 to 2,500
 words.
 
-Counted as unique conversations and essays rather than items, the total is 191:
+Counted as unique conversations and essays rather than items, the total is 192:
 one Catalyst episode is published twice, eleven months apart under different titles.
 
 ---
