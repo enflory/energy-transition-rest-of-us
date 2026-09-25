@@ -103,7 +103,7 @@ and which region of the page holds the content. No code is show-aware.
 
 **Three states, not two.** A URL is one of: never seen; seen but the publisher
 ships no document for it; or scraped. That middle state is real, and on
-Catalyst it covers 21 of 146 pages, which publish show notes only. On Steel For
+Catalyst it covers 21 of 147 pages, which publish show notes only. On Steel For
 Fuel it covers exactly one, the placeholder page a Substack carries before its
 first real post. Without the distinction they reappear as pending work on every
 run forever. The manifest is what carries it, which is why the manifest is
