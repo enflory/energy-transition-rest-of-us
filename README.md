@@ -36,15 +36,15 @@ specification that makes the failure modes explicit and testable.
 
 ## What is in it
 
-As of 2026-09-24:
+As of 2026-09-29:
 
 | | Catalyst | Critical Capital | Steel For Fuel | Total |
 |---|---|---|---|---|
 | Content type | podcast | podcast | essay | |
-| Items with notes | 126 | 11 | 56 | **193** |
+| Items with notes | 126 | 12 | 57 | **195** |
 | Items awaiting notes | 0 | 0 | 0 | **0** |
-| Note text | ~256,000 words | ~25,000 words | ~78,000 words | **~359,000 words** |
-| Median note | 1,998 words | 2,254 words | 1,560 words | |
+| Note text | ~256,000 words | ~27,000 words | ~80,000 words | **~363,000 words** |
+| Median note | 1,998 words | 2,240 words | 1,620 words | |
 | Span | 2022-11 to 2026-09 | 2026-04 to 2026-09 | 2023-03 to 2026-09 | |
 
 Every transcript and essay the publishers have released has a note. Note lengths are not comparable across content types, because essay notes
@@ -106,8 +106,8 @@ sources/
     synthesis/
       hindsight-seeds.md    cross-item threads, for later writing
       archive-caveats.md    data-quality facts about the corpus itself
-  critical-capital/     same layout, 11 notes
-  steel-for-fuel/               an essay source, 56 notes
+  critical-capital/     same layout, 12 notes
+  steel-for-fuel/               an essay source, 57 notes
     source.json         content_type: essay
     posts/
       2026-09-21-for-ai-energy-is-nothing-and-energy-is-everything-reprise/
@@ -316,7 +316,7 @@ would bite a careless reader:
   into a finding.
 - **Charts do not survive the pipeline.** It is text-only. That costs nothing
   on the podcasts and costs real content on an essay source: Steel For Fuel
-  carries 524 figures across 56 posts, half of them uncaptioned. The scraper
+  carries 535 figures across 57 posts, half of them uncaptioned. The scraper
   records each figure's position and URL so the gap is visible rather than
   silent, and notes say so where an argument rests on one.
 

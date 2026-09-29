@@ -22,13 +22,13 @@ The title is explained on the same page: "Steel For Fuel" is displacing fossil
 fuel emissions with the steel in wind turbine towers, solar panels, nuclear
 reactors and other lower-carbon generation.
 
-The archive here holds **56 essays spanning 2023-03-31 to 2026-09-21**, plus
+The archive here holds **57 essays spanning 2023-03-31 to 2026-09-29**, plus
 one placeholder page with no essay. Cadence is irregular and roughly monthly:
-12 posts in 2023, 19 in 2024, 16 in 2025 and 9 through late September 2026.
+12 posts in 2023, 19 in 2024, 16 in 2025 and 10 through late September 2026.
 Nothing is paywalled; the publication has payments disabled entirely.
 
 **Length varies more than anything else in this repository.** Posts run from
-248 words to 11,869, with a median of 2,349 and a total of about 160,000.
+248 words to 11,869, with a median of 2,352 and a total of about 163,000.
 Eleven are under 900 words. This is why essay notes are sized against their
 source rather than against a fixed target, and why a short note here is a
 correct note rather than a lazy one. See the spec.
@@ -136,8 +136,8 @@ Not triggers:
     of his own `2025-07-16` post. The duplicate checker flags the pair at 28%
     overlap. It is self-quotation, not a republication, and both notes should
     be written.
-- **Figures carry real argument, and half of them are bare.** There are 524
-  figures across 56 posts, and only 266 carry a caption; the rest render as
+- **Figures carry real argument, and half of them are bare.** There are 535
+  figures across 57 posts, and only 272 carry a caption; the rest render as
   `[FIGURE: no caption in source]` with a URL. Some posts are chart-led: one
   has 40 figures against 128 paragraphs. Where the prose says "here's the
   index" or "as you can see above" and the number is only in the image, say in
