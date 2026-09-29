@@ -3,7 +3,7 @@
 Facts about this corpus as a corpus, as distinct from what any episode says.
 Read this before counting anything or ordering anything by date.
 
-Window: the whole archive, 2026-04-12 to 2026-09-15. The show is five months
+Window: the whole archive, 2026-04-12 to 2026-09-29. The show is five months
 old, so unlike the Catalyst archive there is no historical era to segment away.
 Every figure below covers all of it.
 
@@ -11,14 +11,14 @@ Every figure below covers all of it.
 
 ## Counts
 
-- **12 episodes published. 11 conversations.** The twelfth, `Introducing
+- **13 episodes published. 12 conversations.** The thirteenth, `Introducing
   Critical Capital` (2026-04-12), is a trailer. The page exists and carries a
   `Transcription` heading with nothing under it. There is no transcript because
   there is no interview. It is recorded in the manifest as `no transcript` and
   correctly produces no note.
 - **No duplicates.** `python run.py dedupe critical-capital` finds no
   near-duplicate pairs. Unlike Catalyst, nothing here has been republished.
-- Transcripts run 5,275 to 7,378 words, mean about 6,100. Catalyst episodes are
+- Transcripts run 5,275 to 7,378 words, mean about 6,200. Catalyst episodes are
   noticeably longer, so a shorter note here is usually correct rather than thin.
 
 ---
