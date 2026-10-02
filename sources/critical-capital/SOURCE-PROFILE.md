@@ -13,11 +13,13 @@ capital platform for clean-economy financing. It is a co-production of Crux and
 Latitude Studios, which also publishes Catalyst. Episodes are a single long
 interview with one guest.
 
-The archive here holds 12 transcripts spanning 2026-04 to 2026-09, plus one
-trailer with no transcript. Episodes run 5,300 to 7,400 words, noticeably
+The archive here holds 13 transcripts spanning 2026-04 to 2026-10, plus one
+trailer with no transcript. Episodes run 4,400 to 7,400 words, noticeably
 shorter than Catalyst. New episodes land every other **Tuesday**, without
-exception from 2026-05-26 through 2026-09-15. The first three releases were
-irregular, so do not read the early gaps as a schedule.
+exception from 2026-05-26 through 2026-09-29. The first three releases were
+irregular, so do not read the early gaps as a schedule. `2026-10-01` is an
+off-schedule Thursday release, a short interview recorded straight after a
+press conference the day before, and is not a change of cadence.
 
 **Where the transcripts come from.** Latitude Media publishes this show but not
 its transcripts. As of 2026-09-18 latitudemedia.com carried 2 of the 12
@@ -67,7 +69,7 @@ be an investor, and it is worth getting the line right.
 Triggers for a `disclosure:` field, both narrow:
 
 - Johnson or the guest states on air that **Crux has a commercial relationship
-  with the guest's company**. Observed twice in 12 episodes:
+  with the guest's company**. Observed twice in 13 episodes:
   - `2026-07-21` Nuveen. Johnson states Crux and Nuveen announced a $500 million
     debt facility, and refers to working with Nuveen over the past year.
   - `2026-09-15` Base Power. Johnson states Crux has handled Base's tax credit

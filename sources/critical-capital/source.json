@@ -16,8 +16,8 @@
   "url_filter": "/critical-capital/",
   "delay_seconds": 1.0,
 
-  "_comment_title_suffix": "Every page title ends with the site name.",
-  "title_suffix": "\\s*\\|\\s*Crux\\s*$",
+  "_comment_title_suffix": "Every page title ends with the site name. From 2026-10-01 some end with the show name instead ('... | Critical Capital'), which leaked into the folder slug. The pattern strips either, or both, in any order.",
+  "title_suffix": "(?:\\s*\\|\\s*(?:Crux|Critical Capital))+\\s*$",
 
   "_comment_published": "There is no article:published_time meta tag and no JSON-LD on these pages. The date is rendered as text in the hero, as 'Podcast · Sep 15, 2026'. The same string appears again in the 'More episodes' cards at the foot of the page, so the pattern is anchored to the hero container. If that container is ever renamed the date comes back empty and the folder is named 'undated-...', which is visible rather than silently wrong.",
   "published": [
