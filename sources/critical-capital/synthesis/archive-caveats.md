@@ -3,7 +3,7 @@
 Facts about this corpus as a corpus, as distinct from what any episode says.
 Read this before counting anything or ordering anything by date.
 
-Window: the whole archive, 2026-04-12 to 2026-09-29. The show is five months
+Window: the whole archive, 2026-04-12 to 2026-10-01. The show is five months
 old, so unlike the Catalyst archive there is no historical era to segment away.
 Every figure below covers all of it.
 
@@ -11,14 +11,14 @@ Every figure below covers all of it.
 
 ## Counts
 
-- **13 episodes published. 12 conversations.** The thirteenth, `Introducing
+- **14 episodes published. 13 conversations.** The fourteenth, `Introducing
   Critical Capital` (2026-04-12), is a trailer. The page exists and carries a
   `Transcription` heading with nothing under it. There is no transcript because
   there is no interview. It is recorded in the manifest as `no transcript` and
   correctly produces no note.
 - **No duplicates.** `python run.py dedupe critical-capital` finds no
   near-duplicate pairs. Unlike Catalyst, nothing here has been republished.
-- Transcripts run 5,275 to 7,378 words, mean about 6,200. Catalyst episodes are
+- Transcripts run 4,401 to 7,378 words, mean about 6,100. Catalyst episodes are
   noticeably longer, so a shorter note here is usually correct rather than thin.
 
 ---
@@ -67,8 +67,13 @@ not match for that one episode. Nothing is wrong; do not "fix" it.
 ## Dating
 
 - **Published biweekly on Tuesdays from 2026-05-26 onward**, without exception
-  through 2026-09-15. The first three releases were irregular: the trailer on a
+  through 2026-09-29. The first three releases were irregular: the trailer on a
   Sunday, then gaps of 16, 9 and 19 days.
+- **`2026-10-01` is off-schedule.** A Thursday release two days after a
+  regular one, recorded immediately after the press conference announcing a
+  Senate bill, which the host dates to 2026-09-30. At 4,401 words it is the
+  shortest transcript in the archive. Its page title was also the first to
+  end in `| Critical Capital` rather than `| Crux`; `source.json` strips both.
 - **Publication date is not recording date.** In `2026-06-23` the guest says on
   air that the recording precedes release by weeks, then describes "this week"
   in the present tense and refers to meetings happening that day. Any claim in

@@ -36,16 +36,16 @@ specification that makes the failure modes explicit and testable.
 
 ## What is in it
 
-As of 2026-09-29:
+As of 2026-10-01:
 
 | | Catalyst | Critical Capital | Steel For Fuel | Total |
 |---|---|---|---|---|
 | Content type | podcast | podcast | essay | |
-| Items with notes | 126 | 12 | 57 | **195** |
+| Items with notes | 126 | 13 | 57 | **196** |
 | Items awaiting notes | 0 | 0 | 0 | **0** |
-| Note text | ~256,000 words | ~27,000 words | ~80,000 words | **~363,000 words** |
-| Median note | 1,998 words | 2,240 words | 1,620 words | |
-| Span | 2022-11 to 2026-09 | 2026-04 to 2026-09 | 2023-03 to 2026-09 | |
+| Note text | ~256,000 words | ~29,000 words | ~80,000 words | **~365,000 words** |
+| Median note | 1,998 words | 2,226 words | 1,620 words | |
+| Span | 2022-11 to 2026-09 | 2026-04 to 2026-10 | 2023-03 to 2026-09 | |
 
 Every transcript and essay the publishers have released has a note. Note lengths are not comparable across content types, because essay notes
 are sized against their source: Steel For Fuel's range from about 400 to 2,500
@@ -106,7 +106,7 @@ sources/
     synthesis/
       hindsight-seeds.md    cross-item threads, for later writing
       archive-caveats.md    data-quality facts about the corpus itself
-  critical-capital/     same layout, 12 notes
+  critical-capital/     same layout, 13 notes
   steel-for-fuel/               an essay source, 57 notes
     source.json         content_type: essay
     posts/
