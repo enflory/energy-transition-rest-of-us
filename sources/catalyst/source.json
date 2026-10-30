@@ -9,6 +9,10 @@
     "https://www.latitudemedia.com/post-sitemap2.xml"
   ],
   "url_filter": "/catalyst-",
+
+  "_comment_feed": "Latitude does not always use the catalyst- prefix (the 2026-02-05 nuclear and 2026-10-29 gas turbine episodes lack it), so the podcast feed is read too and each recent item matched to its sitemap page by title. Sponsored and crossover shows share this feed and are skipped.",
+  "feed": "https://feeds.megaphone.fm/catalyst",
+  "feed_skip": "partner content|frontier forum|with great power|carbon copy|green blueprint|critical capital:|introducing:|re-?published|\\(rerun\\)",
   "delay_seconds": 1.0,
 
   "_comment_title_suffix": "The <title> element ends with the publisher's name on every page. Stripped so folder names and note titles match what the episode is called.",

@@ -9,7 +9,7 @@ wrong.
 ## Overview
 
 ```
-publisher sitemap + index pages
+publisher sitemap + index pages + podcast feed
       |
       |  scripts/scrape.py      config: sources/<source>/source.json
       v
@@ -93,6 +93,16 @@ sources are unioned. The sitemap is cheap and usually complete; the listing is
 never stale, because it is the page the publisher updates to announce an
 episode. Running both costs two extra requests and removes a failure mode that
 is silent by construction.
+
+**And a third, because `url_filter` is not a contract either.** Every Catalyst
+page carried a `catalyst-` prefix until it didn't: the 2026-02-05 nuclear
+episode and the 2026-10-29 gas turbine episode were published without one, so
+the sitemap listed both and the filter discarded them. The first sat unnoticed
+for nine months. A show can therefore declare its podcast `feed`, the one list
+that contains exactly the episodes. Feed items do not link to their own pages,
+so each item from the last year is matched to a sitemap URL by comparing its
+title with the URL slug. An item that matches nothing, and has no saved episode
+within three days of it, is printed as a warning for a person to resolve.
 
 **The publisher of a show is not always the publisher of its transcripts.**
 Critical Capital is a Latitude Media show whose transcripts Latitude does not
