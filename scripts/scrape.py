@@ -53,7 +53,7 @@ import sys
 import time
 import urllib.parse
 import urllib.request
-from datetime import datetime
+from datetime import datetime, timezone
 
 import archive
 
@@ -87,8 +87,9 @@ def load_config(source):
     """Read sources/<source>/source.json and populate module state."""
     global CFG, KIND, OUT_ROOT, MANIFEST, SITEMAPS, CORRECTIONS, BOILERPLATE
     global NON_SPEAKERS, DELAY_SECONDS, TITLE_SUFFIX, PUBLISHED
-    global CONTENT_START, CONTENT_END
+    global CONTENT_START, CONTENT_END, _SITEMAP_LOCS
     CFG = archive.load(source)
+    _SITEMAP_LOCS = None  # one process may check several sources
     KIND = archive.kind(CFG)
     OUT_ROOT = archive.items_dir(source, CFG)
     MANIFEST = archive.manifest(source)
@@ -108,8 +109,12 @@ def load_config(source):
                    if CFG.get("content_end") else None)
     return CFG
 
-UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-      "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+# Says what this is rather than posing as a browser. Latitude's Cloudflare
+# returned 403 to the old browser-shaped string on 2026-10-29 and served the
+# same pages to this one, and a publisher deciding whether to allow a small
+# archive should be able to see that it is one.
+UA = ("energy-transition-archive/1.0 "
+      "(+https://github.com/enflory/energy-transition-rest-of-us)")
 
 # A transcript paragraph opens with a speaker label, e.g. "Jane Doe:".
 # This shape is shared across shows; everything else show-specific is in
@@ -176,19 +181,105 @@ def topic_bullets(page):
     return [i for i in items if i]
 
 
+_SITEMAP_LOCS = None
+
+
+def sitemap_locs():
+    """Every URL in the publisher sitemaps, unfiltered. Read once per run."""
+    global _SITEMAP_LOCS
+    if _SITEMAP_LOCS is None:
+        _SITEMAP_LOCS = []
+        for sm in SITEMAPS:
+            try:
+                xml = fetch(sm)
+            except Exception as exc:  # noqa: BLE001
+                print(f"WARN   could not read {sm}: {exc}")
+                continue
+            _SITEMAP_LOCS += re.findall(r"<loc>([^<]+)</loc>", xml)
+    return _SITEMAP_LOCS
+
+
 def sitemap_urls():
     """Episode URLs for this show listed in the publisher sitemaps."""
-    found = []
     needle = CFG.get("url_filter", "")
-    for sm in SITEMAPS:
-        try:
-            xml = fetch(sm)
-        except Exception as exc:  # noqa: BLE001
-            print(f"WARN   could not read {sm}: {exc}")
+    return [loc for loc in sitemap_locs() if needle in loc]
+
+
+def _words(text):
+    text = html.unescape(text).lower().replace("’", "'").replace("'", "")
+    return " ".join(re.findall(r"[a-z0-9]+", text))
+
+
+def feed_urls():
+    """Episode URLs found by reading the show's podcast feed.
+
+    The url_filter assumes the publisher puts every episode under one URL
+    prefix, and Latitude does not always: on 2026-10-29 Catalyst's gas turbines
+    episode and its 2026-02-05 nuclear episode were both published without
+    "catalyst-", so the sitemap listed them and the filter threw them away.
+    The feed is the one list that contains exactly the episodes, but its items
+    do not link to their own pages, so each recent item is matched to a
+    sitemap URL by comparing its title with the URL's slug.
+
+    An item that matches nothing is printed for a person to find by hand,
+    unless the manifest already holds an episode within a few days of it:
+    feed titles are often reworded from the page title, and a weekly show
+    with a saved episode that week is almost always that episode.
+    """
+    feed = CFG.get("feed")
+    if not feed:
+        return []
+    try:
+        xml = fetch(feed)
+    except Exception as exc:  # noqa: BLE001
+        print(f"WARN   could not read {feed}: {exc}")
+        return []
+    from difflib import SequenceMatcher
+    from email.utils import parsedate_to_datetime
+
+    lookback = CFG.get("feed_lookback_days", 365)
+    skip = re.compile(CFG["feed_skip"], re.I) if CFG.get("feed_skip") else None
+    now = datetime.now().astimezone()
+    slugs = {loc: _words(loc.rstrip("/").rsplit("/", 1)[-1])
+             for loc in sitemap_locs()}
+    prefix = _words(CFG.get("url_filter", ""))
+    saved_dates = set()
+    if os.path.exists(MANIFEST):
+        with open(MANIFEST, newline="", encoding="utf-8") as fh:
+            for row in csv.DictReader(fh):
+                if row.get("published"):
+                    saved_dates.add(row["published"][:10])
+
+    found = []
+    for item in re.findall(r"<item>(.*?)</item>", xml, re.S):
+        title = re.search(r"<title>(.*?)</title>", item, re.S)
+        date = re.search(r"<pubDate>(.*?)</pubDate>", item)
+        if not (title and date):
             continue
-        for loc in re.findall(r"<loc>([^<]+)</loc>", xml):
-            if needle in loc:
-                found.append(loc)
+        title = re.sub(r"<!\[CDATA\[|\]\]>", "", title.group(1)).strip()
+        when = parsedate_to_datetime(date.group(1).strip())
+        if when.tzinfo is None:  # "-0000" parses as naive
+            when = when.replace(tzinfo=timezone.utc)
+        if (now - when).days > lookback or (skip and skip.search(title)):
+            continue
+        want = _words(title)
+        best, url = 0.0, None
+        for loc, slug in slugs.items():
+            if prefix and slug.startswith(prefix + " "):
+                slug = slug[len(prefix) + 1:]
+            score = SequenceMatcher(None, want, slug).ratio()
+            if score > best:
+                best, url = score, loc
+        if best >= 0.8:
+            found.append(url)
+            continue
+        if any(abs((when.date() - datetime.fromisoformat(d).date()).days) <= 3
+               for d in saved_dates):
+            continue
+        print(f"WARN   in the podcast feed but no page found: "
+              f"{when.date()} {html.unescape(title)}\n"
+              f"       find its page and run: python scripts/scrape.py "
+              f"{CFG['name']} <url>")
     return found
 
 
@@ -235,7 +326,7 @@ def index_urls():
 
 def episode_urls():
     """Every known episode URL for this show, from every configured source."""
-    return sorted(set(sitemap_urls()) | set(index_urls()))
+    return sorted(set(sitemap_urls()) | set(index_urls()) | set(feed_urls()))
 
 
 def published_date(page):

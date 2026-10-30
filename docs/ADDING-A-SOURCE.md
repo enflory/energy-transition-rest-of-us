@@ -89,13 +89,16 @@ Copy `sources/critical-capital/source.json` for a podcast or
 | `non_speakers` | Labels matching the speaker shape that are not people. |
 | `boilerplate` | Sponsor reads, credits, ad markers. |
 
-Five more fields exist for sites that are not the default WordPress shape. All
+Eight more fields exist for sites that are not the default WordPress shape. All
 are optional, and omitting one keeps the original behaviour.
 
 | Field | What it does |
 |---|---|
 | `index_pages` | Listing pages to walk for episode links, unioned with the sitemap results. Use whenever the sitemap might lag. |
 | `index_link_pattern` | Regex with one capture group extracting an episode href from a listing page. |
+| `feed` | The show's podcast RSS feed. Each recent item is matched to a sitemap URL by title, which finds episodes the publisher filed outside `url_filter`. Items with no match are printed for a person to find by hand. |
+| `feed_skip` | Regex of feed titles to ignore: sponsored episodes and other shows that share the feed. |
+| `feed_lookback_days` | How far back the feed is checked. Defaults to 365. Older items are covered by the sitemap, and their titles drift too far from their pages to match reliably. |
 | `index_next_pattern` | Regex with one capture group giving the "next page" link, for paginated listings. Omit if there is one page. |
 | `title_suffix` | Regex stripped off the end of `<title>`, usually the site name. |
 | `published` | List of `{pattern, format}` extractors for the publication date, tried in order. `format` is `iso` for an ISO timestamp, otherwise a `strptime` format. Defaults to the `article:published_time` meta tag. |
