@@ -182,16 +182,23 @@ the archive on disk, which is authoritative for anything actually saved. An
 earlier version rewrote the file wholesale and a partial run cut it from 146
 rows to 48.
 
-One exception to that order: failing to reach a page does not replace an
-earlier `no transcript` row. On 2026-11-11 Latitude blocked a Catalyst fetch
-and every page it retried came back 403. 20 of the 21 dated `no transcript`
-rows in the Catalyst manifest (podcast) were rewritten as undated errors. That also hid them from the status check, which counts a URL
-as checked only while its row says `no transcript`, so they would have
-reappeared as pending work. "Could not reach" means a block, a rate limit, a
-timeout, a server error or a dropped connection. Every other error is still
-recorded. A 404 says the page itself has changed. A crash in the parser means
-the page did arrive and something about it is new. And a URL with no earlier
-outcome shows its failure, so a new item that fails stays visible.
+One exception to that order: a fetch that never reached the page does not
+replace an earlier row, unless that row was itself an error. On 2026-11-11
+Latitude blocked a Catalyst fetch and every page it retried came back 403.
+20 of the 21 dated `no transcript` rows in the Catalyst manifest (podcast)
+were rewritten as undated errors. That also hid them from the status check,
+which counts a URL as checked only while its row says `no transcript`, so
+they would have reappeared as pending work. `saved` rows are just as exposed
+on a fresh clone: documents are gitignored, so a fetch there requests every
+item, and if it is blocked nothing on disk can restore the rows it wipes.
+
+"Never reached" is everything that stops the page arriving except a 404 or
+410, which say the page is gone. The test is broad on purpose. Mistaking an
+unreached page for a reached one overwrites what the manifest knew; the
+opposite mistake only leaves an earlier row standing for one more run. Every
+other error is still recorded. A crash in the parser means the page did
+arrive and something about it is new. And a URL with no earlier row shows its
+failure, so a new item that fails stays visible.
 
 Both rules are pinned by `scripts/test_manifest.py`, which runs on every pull
 request. It needs no network and writes only to a temporary directory.
