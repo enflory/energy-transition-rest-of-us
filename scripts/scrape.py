@@ -51,6 +51,7 @@ import os
 import re
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
@@ -131,6 +132,21 @@ def fetch(url):
     req = urllib.request.Request(url, headers={"User-Agent": UA})
     with urllib.request.urlopen(req, timeout=60) as r:
         return r.read().decode("utf-8", errors="replace")
+
+
+def unreachable(exc):
+    """True if an exception raised by fetch() learned nothing about the item.
+
+    Only a 404 or 410 says something about the page: it is gone. Anything
+    else that stops fetch() returning a page (a block, a rate limit, an auth
+    or legal wall, a redirect loop, a server error, a timeout, a connection
+    dropped mid-download) is news about the route to the page. The test is
+    deliberately broad, because the two mistakes are not equal: calling an
+    unreached page reached overwrites what the manifest knew, while the
+    reverse only leaves an earlier row standing for one more run.
+    """
+    return not (isinstance(exc, urllib.error.HTTPError)
+                and exc.code in (404, 410))
 
 
 def clean(fragment):
@@ -702,21 +718,38 @@ def rows_from_disk():
     return found
 
 
-def write_manifest(rows):
+def write_manifest(rows, unreached=frozenset()):
     """Merge this run into the manifest rather than replacing it.
 
     A partial run must not drop episodes it did not touch. Precedence is
     previous manifest, then this run, then the archive on disk, which is
-    authoritative for anything actually saved.
+    authoritative for anything actually saved. One exception: for a URL in
+    `unreached`, whose page this run could not reach, an earlier row is kept
+    rather than replaced by the error, unless that row was itself an error.
+    Returns how many rows were kept that way.
     """
     os.makedirs(OUT_ROOT, exist_ok=True)
-    merged = {}
+    merged, kept = {}, 0
     if os.path.isfile(MANIFEST):
         with open(MANIFEST, encoding="utf-8", newline="") as f:
             for r in csv.reader(f):
                 if len(r) == 6 and r[0] != "published":
                     merged[r[5]] = r
     for r in rows:
+        # A fetch that never reached the page learned nothing, so it must not
+        # replace what an earlier run did learn. A "no <document>" row would
+        # lose its date and drop out of the status check's checked-previously
+        # set, coming back as pending work. A "saved" row is just as exposed
+        # on a fresh clone: documents are gitignored, so rows_from_disk()
+        # has nothing to restore it from. The error is still recorded for a
+        # URL with no earlier row, or whose earlier row was an error too.
+        # Errors from a page that did arrive (a parse failure) and 404s are
+        # not in `unreached`, and replace the row as before.
+        prev = merged.get(r[5])
+        if (r[5] in unreached and prev is not None
+                and not prev[2].startswith("error")):
+            kept += 1
+            continue
         merged[r[5]] = r
     merged.update(rows_from_disk())
 
@@ -729,6 +762,7 @@ def write_manifest(rows):
         w.writerow(["published", "title", "status", "words", "folder", "url"])
         for r in sorted(merged.values(), key=lambda r: (r[0] or "9999", r[1])):
             w.writerow(r)
+    return kept
 
 
 def main(argv):
@@ -741,6 +775,9 @@ def main(argv):
     force = "--force" in argv
     args = [a for a in argv if not a.startswith("--")]
     urls = episode_urls() if "--all" in argv else args
+    # Once per URL: the manifest holds one row per URL, and two attempts in
+    # one run would leave `unreached` describing the wrong one.
+    urls = list(dict.fromkeys(urls))
     if not urls:
         sys.exit(__doc__)
     print(f"{CFG.get('display_name', source)}")
@@ -752,6 +789,7 @@ def main(argv):
 
     print(f"{len(urls)} {KIND['item']} URLs to process\n")
     rows, counts = [], {"saved": 0, "skipped": 0, missing: 0, "error": 0}
+    unreached = set()
     have = set() if force else saved_urls()
 
     for i, url in enumerate(urls, 1):
@@ -761,12 +799,17 @@ def main(argv):
             rows.append(["", slug, "already saved", "", "", url])
             print(f"[{i:>3}/{len(urls)}] SKIP   already saved  {slug[:60]}")
             continue
+        page = None
         try:
             page = fetch(url)
             ep = parse(page, url)
         except Exception as exc:  # noqa: BLE001
             counts["error"] += 1
             rows.append(["", slug, f"error: {type(exc).__name__}", "", "", url])
+            # Only a fetch that never got the page counts; parse() failing
+            # means the page arrived and something about it is new.
+            if page is None and unreachable(exc):
+                unreached.add(url)
             print(f"[{i:>3}/{len(urls)}] ERROR  {type(exc).__name__}: {exc}")
             time.sleep(DELAY_SECONDS)
             continue
@@ -785,10 +828,13 @@ def main(argv):
                   f"{ep['word_count']:>6,}w  {folder_name(ep)[:70]}")
         time.sleep(DELAY_SECONDS)
 
-    write_manifest(rows)
+    kept = write_manifest(rows, unreached)
     print("\n" + "-" * 60)
     for k, v in counts.items():
         print(f"  {k:<16} {v}")
+    if unreached:
+        print(f"  {'not reached':<16} {len(unreached)}"
+              f"   (of the errors; {kept} kept their earlier manifest row)")
     print(f"  manifest         {os.path.relpath(MANIFEST, ROOT)}")
 
 
