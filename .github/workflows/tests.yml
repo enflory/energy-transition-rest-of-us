@@ -1,0 +1,23 @@
+# Runs the pipeline's regression tests on every pull request, so a change to
+# the scraper that breaks the manifest merge fails before it reaches main.
+# Standard library only; nothing to install.
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python scripts/test_manifest.py -v

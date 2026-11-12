@@ -193,6 +193,9 @@ recorded. A 404 says the page itself has changed. A crash in the parser means
 the page did arrive and something about it is new. And a URL with no earlier
 outcome shows its failure, so a new item that fails stays visible.
 
+Both rules are pinned by `scripts/test_manifest.py`, which runs on every pull
+request. It needs no network and writes only to a temporary directory.
+
 ---
 
 ## Stage 3: writing the note

@@ -97,6 +97,7 @@ python run.py validate [source]  # structural check
 python run.py dedupe [source]    # find republished items
 python run.py stats [source]     # archive size and coverage
 python reader/build.py --serve   # build the reading site, serve it on :8000
+python scripts/test_manifest.py  # regression tests for the scraper's manifest
 ```
 
 Run `validate` before reporting a note as finished, and fix every ERROR.
