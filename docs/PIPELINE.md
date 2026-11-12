@@ -182,6 +182,17 @@ the archive on disk, which is authoritative for anything actually saved. An
 earlier version rewrote the file wholesale and a partial run cut it from 146
 rows to 48.
 
+One exception to that order: failing to reach a page does not replace an
+earlier `no transcript` row. On 2026-11-11 Latitude blocked a Catalyst fetch
+and every page it retried came back 403. 20 of the 21 dated `no transcript`
+rows in the Catalyst manifest (podcast) were rewritten as undated errors. That also hid them from the status check, which counts a URL
+as checked only while its row says `no transcript`, so they would have
+reappeared as pending work. "Could not reach" means a block, a rate limit, a
+timeout, a server error or a dropped connection. Every other error is still
+recorded. A 404 says the page itself has changed. A crash in the parser means
+the page did arrive and something about it is new. And a URL with no earlier
+outcome shows its failure, so a new item that fails stays visible.
+
 ---
 
 ## Stage 3: writing the note
